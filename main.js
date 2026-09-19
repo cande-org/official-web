@@ -1,6 +1,12 @@
 const copy = {
   en: {
     skip: "Skip to content",
+    privacyLink: "Privacy Policy",
+    termsLink: "Terms of Service",
+    backHome: "Home",
+    effectiveDate: "Effective October 1, 2026 · Prepared September 19, 2026",
+    privacyReview:
+      "Scheduled policy draft. Actual international processing locations and provider deletion/backup periods will be finalized against operational contracts before the effective date.",
     navService: "Service",
     companyIntro: "Cande makes<br>mobile apps.",
     companyDetail:
@@ -63,12 +69,33 @@ function setLanguage(language) {
     .forEach((el) =>
       el.setAttribute("aria-pressed", String(el.dataset.lang === language)),
     );
-  document.title =
-    language === "ko"
-      ? "Cande — 모바일 앱을 만듭니다."
-      : "Cande — We make mobile apps.";
-  document.querySelector('meta[name="description"]').content =
-    descriptions[language];
+  const page = document.body.dataset.page;
+  document.querySelectorAll("[data-document-language]").forEach((article) => {
+    article.hidden = article.dataset.documentLanguage !== language;
+  });
+  if (page === "privacy" || page === "terms") {
+    const title = copy[language][page + "Link"];
+    document.title = title + " | Cande";
+    document.querySelector('meta[name="description"]').content =
+      language === "ko"
+        ? "Cande 정병발사 " + title + ". 시행일 2026년 10월 1일."
+        : "Cande Jeongbyeong Balsa " + title + ". Effective October 1, 2026.";
+    const anchor = location.hash.match(/^#(privacy|terms)-(ko|en)-(\d+)$/);
+    if (anchor && anchor[2] !== language) {
+      history.replaceState(
+        null,
+        "",
+        "#" + anchor[1] + "-" + language + "-" + anchor[3],
+      );
+    }
+  } else {
+    document.title =
+      language === "ko"
+        ? "Cande — 모바일 앱을 만듭니다."
+        : "Cande — We make mobile apps.";
+    document.querySelector('meta[name="description"]').content =
+      descriptions[language];
+  }
   try {
     localStorage.setItem("cande-language", language);
   } catch {

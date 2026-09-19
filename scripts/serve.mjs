@@ -35,6 +35,9 @@ const server = createServer(async (req, res) => {
       !types[extname(file)] ||
       !(
         relative === "index.html" ||
+        relative === "privacy.html" ||
+        relative === "terms.html" ||
+        relative === "legal.css" ||
         relative === "main.js" ||
         relative === "style.css" ||
         relative.startsWith("assets" + sep)

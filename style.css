@@ -713,3 +713,17 @@ html[lang="en"] .app-identity h2 {
     transform: none;
   }
 }
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  font-size: 12px;
+  margin: 0 0 24px;
+}
+.legal-links a:first-child {
+  font-weight: 600;
+}
+.legal-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
