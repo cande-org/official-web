@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#faf9f6" />
-    <title>Cande — 일상에, 작은 내 편.</title>
+    <meta name="theme-color" content="#ffffff" />
+    <title>Cande — 모바일 앱을 만듭니다.</title>
     <meta
       name="description"
-      content="Cande는 일상에 작은 내 편이 되는 서비스를 만듭니다. AI 친구들과 감정을 나누는 리액션 채팅 앱, 정병발사를 만나보세요."
+      content="Cande는 모바일 앱을 만듭니다. AI 친구들과 대화하는 리액션 채팅 앱, 정병발사를 소개합니다."
     />
     <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
     <link
@@ -22,16 +22,9 @@
   </head>
   <body>
     <a class="skip" href="#main" data-i18n="skip">본문으로 바로가기</a>
-    <div class="progress" aria-hidden="true"></div>
-    <header class="header">
-      <a class="brand" href="#" aria-label="Cande home"
-        >Cande<span class="brand-dot">.</span></a
-      >
-      <nav aria-label="Main navigation">
-        <a href="#about" data-i18n="navAbout">회사 소개</a>
-        <a href="#service" data-i18n="navService">서비스</a>
-        <a href="#contact" data-i18n="navContact">문의</a>
-      </nav>
+    <header class="header page-width">
+      <a class="brand" href="#" aria-label="Cande home">Cande</a>
+      <a class="service-link" href="#service" data-i18n="navService">서비스</a>
       <div class="languages" role="group" aria-label="Language / 언어">
         <button type="button" data-lang="ko" aria-pressed="true">KO</button
         ><span aria-hidden="true">/</span
@@ -39,328 +32,196 @@
       </div>
     </header>
     <main id="main">
-      <section class="hero wrap" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow">
-            <span class="tiny-star" aria-hidden="true">✳</span> A LITTLE CLOSER
-            TO YOU
-          </p>
-          <h1 id="hero-title">
-            <span data-i18n="hero1">일상에,</span><br /><span
-              class="hand hero-hand"
-              data-i18n="hero2"
-              >작은 내 편.</span
-            >
-          </h1>
-          <p class="hero-description" data-i18n="heroDescription">
-            별일 아닌 하루도, 별일 많았던 하루도.<br />당신의 마음이 조금 더
-            가벼워지도록<br />Cande는 사람 곁에 머무는 서비스를 만듭니다.
-          </p>
-          <a class="button button-dark" href="#service"
-            ><span data-i18n="discover">우리의 서비스 만나기</span
-            ><span aria-hidden="true">↗</span></a
-          >
-        </div>
-        <div class="hero-art" aria-hidden="true">
-          <span class="art-note hand" data-i18n="artNote"
-            >오늘 하루는 어땠어?</span
-          >
-          <div class="orbit orbit-one"></div>
-          <div class="orbit orbit-two"></div>
-          <div class="face face-one">
-            <img
-              src="./assets/avatar-stable.svg"
-              alt=""
-              width="190"
-              height="190"
-            />
-          </div>
-          <div class="face face-two">
-            <img
-              src="./assets/avatar-anxious.svg"
-              alt=""
-              width="164"
-              height="164"
-            />
-          </div>
-          <div class="face face-three">
-            <img
-              src="./assets/avatar-avoidant.svg"
-              alt=""
-              width="154"
-              height="154"
-            />
-          </div>
-          <span class="little-message message-one hand" data-i18n="artBubble1"
-            >일단 네 편부터 할게.</span
-          >
-          <span class="little-message message-two hand" data-i18n="artBubble2"
-            >여기선 다 말해도 돼!</span
-          >
-          <span class="spark spark-one">✳</span
-          ><span class="spark spark-two">✧</span>
-          <span class="art-caption">A small hello. A lighter day.</span>
-        </div>
-        <div class="hero-bottom">
-          <span data-i18n="heroFoot"
-            >작은 공감에서 시작되는, 조금 다른 일상</span
-          ><a href="#about"
-            >SCROLL TO EXPLORE <span aria-hidden="true">↓</span></a
-          >
-        </div>
-      </section>
-      <section
-        id="about"
-        class="about wrap section"
-        aria-labelledby="about-title"
-      >
-        <div class="section-label reveal">
-          <span>01 / ABOUT CANDE</span
-          ><span class="hand label-note" data-i18n="aboutNote"
-            >우리가 만드는 것</span
-          >
-        </div>
-        <div class="about-body reveal">
-          <h2 id="about-title" data-i18n="aboutTitle">
-            대단한 변화보다,<br />내 하루에
-            <span class="underlined">와닿는 것.</span>
-          </h2>
-          <div class="about-copy">
-            <p data-i18n="aboutText1">
-              누군가 내 이야기에 귀 기울여 주는 순간.<br />별것 아닌 한마디에
-              웃음이 나는 순간.
-            </p>
-            <p data-i18n="aboutText2">
-              우리는 그런 작은 순간의 힘을 믿습니다.<br />기술에 다정한 반응을
-              더해,<br />매일의 감정과 가까운 서비스를 만듭니다.
-            </p>
-          </div>
-        </div>
-        <div class="values reveal">
-          <p>
-            <span>01</span
-            ><span data-i18n="value1">사람의 마음에서 시작하고</span>
-          </p>
-          <p>
-            <span>02</span><span data-i18n="value2">복잡한 건 덜어내고</span>
-          </p>
-          <p>
-            <span>03</span
-            ><span data-i18n="value3">작은 즐거움을 남깁니다</span>
+      <section class="intro page-width" aria-labelledby="company-name">
+        <h1 id="company-name">Cande</h1>
+        <div class="intro-copy">
+          <p data-i18n="companyIntro">Cande는<br />모바일 앱을 만듭니다.</p>
+          <p class="intro-detail" data-i18n="companyDetail">
+            지금은 AI 친구들과 대화하는<br />정병발사를 만들고 있습니다.
           </p>
         </div>
       </section>
       <section
         id="service"
-        class="service section"
+        class="product page-width"
         aria-labelledby="service-title"
       >
-        <div class="wrap">
-          <div class="section-label reveal">
-            <span>02 / OUR SERVICE</span
-            ><span class="hand label-note" data-i18n="serviceNote"
-              >우리의 첫 번째 이야기</span
-            >
+        <div class="product-heading">
+          <div class="app-identity">
+            <img
+              src="./assets/app-icon.png"
+              alt="정병발사 앱 아이콘"
+              data-alt="appIcon"
+              width="60"
+              height="60"
+            />
+            <h2 id="service-title" data-i18n="appName">정병발사</h2>
           </div>
-          <div class="service-grid">
-            <div class="service-copy reveal">
-              <div class="app-identity">
+          <p data-i18n="appCategory">AI 리액션 채팅 앱</p>
+        </div>
+        <div class="product-stage">
+          <div class="product-story">
+            <h3 class="hand" data-i18n="productTitle">
+              단톡방에<br />보내기 전에.
+            </h3>
+            <p class="product-description" data-i18n="productDescription">
+              화나고 억울한 일, AI 친구들에게 먼저 털어놓으세요. 각자 다른
+              성향과 말투로 내 이야기에 반응합니다.
+            </p>
+            <div
+              class="personas"
+              aria-label="AI 친구 성향"
+              data-label="personasLabel"
+            >
+              <figure>
                 <img
-                  src="./assets/app-icon.png"
-                  alt="정병발사 앱 아이콘"
-                  data-alt="appIcon"
-                  width="80"
-                  height="80"
+                  src="./assets/avatar-stable.svg"
+                  alt=""
+                  width="100"
+                  height="100"
                 />
-                <div>
-                  <span class="small-label">BY CANDE</span>
-                  <h2 id="service-title" class="hand" data-i18n="appName">
-                    정병발사
-                  </h2>
-                </div>
-              </div>
-              <h3 data-i18n="serviceTitle">
-                참았던 말은 여기로.<br />내 편들은 이미 대기 중.
-              </h3>
-              <p class="service-description" data-i18n="serviceDescription">
-                친구 단톡방에 보내기엔 망설여지는 이야기.<br />이제 나만의 AI
-                친구들에게 먼저 털어놓으세요.<br />해답보다 공감이 필요한 날을
-                위한 리액션 채팅방.
-              </p>
-              <div class="service-features">
-                <p>
-                  <span aria-hidden="true">↳</span
-                  ><span data-i18n="feature1"
-                    >저마다 다른 성향의 AI 친구들</span
-                  >
-                </p>
-                <p>
-                  <span aria-hidden="true">↳</span
-                  ><span data-i18n="feature2"
-                    >혼자서도, 최대 3명과 함께하는 단톡도</span
-                  >
-                </p>
-                <p>
-                  <span aria-hidden="true">↳</span
-                  ><span data-i18n="feature3"
-                    >내 취향대로 만드는 닉네임과 프로필</span
-                  >
-                </p>
-              </div>
-              <a class="text-link" href="mailto:cande.official4@gmail.com"
-                ><span data-i18n="appContact">정병발사에 대해 문의하기</span
-                ><span aria-hidden="true">↗</span></a
-              >
+                <figcaption class="hand" data-i18n="persona1">
+                  안정형
+                </figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="./assets/avatar-anxious.svg"
+                  alt=""
+                  width="100"
+                  height="100"
+                />
+                <figcaption class="hand" data-i18n="persona2">
+                  불안형
+                </figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="./assets/avatar-avoidant.svg"
+                  alt=""
+                  width="100"
+                  height="100"
+                />
+                <figcaption class="hand" data-i18n="persona3">
+                  회피형
+                </figcaption>
+              </figure>
             </div>
-            <div class="chat-stage reveal">
-              <span class="hand chat-note" data-i18n="chatNote"
-                >이런 친구들, 하나쯤 필요했잖아.</span
-              >
-              <div
-                class="chat-demo"
-                role="group"
-                aria-label="정병발사 대화 예시"
-                data-label="chatLabel"
-              >
-                <div class="chat-header">
-                  <span aria-hidden="true">‹</span
-                  ><strong class="hand" data-i18n="roomName"
-                    >무조건 내 편들</strong
-                  ><span class="chat-count">3</span
-                  ><span class="chat-menu" aria-hidden="true">⋮</span>
+          </div>
+          <div class="chat-stage">
+            <div
+              class="chat-demo"
+              role="group"
+              aria-label="정병발사 대화 예시"
+              data-label="chatLabel"
+            >
+              <div class="chat-header">
+                <strong class="hand" data-i18n="roomName">무조건 내 편들</strong
+                ><span>3</span>
+                <div class="chat-faces" aria-hidden="true">
+                  <img
+                    src="./assets/avatar-stable.svg"
+                    alt=""
+                    width="24"
+                    height="24"
+                  /><img
+                    src="./assets/avatar-anxious.svg"
+                    alt=""
+                    width="24"
+                    height="24"
+                  /><img
+                    src="./assets/avatar-avoidant.svg"
+                    alt=""
+                    width="24"
+                    height="24"
+                  />
                 </div>
-                <div class="chat-messages hand">
-                  <span class="demo-label" data-i18n="demoLabel"
-                    >이해를 돕기 위한 대화 예시</span
-                  >
-                  <div class="chat-row outgoing">
-                    <p data-i18n="userMessage">
-                      오늘 팀플 나 혼자 다 했어…<br />이게 맞아? 진짜 너무해
+              </div>
+              <div class="chat-messages hand">
+                <div class="chat-row outgoing">
+                  <p data-i18n="userMessage">
+                    오늘 팀플 나 혼자 다 했어…<br />이게 맞아? 진짜 너무해
+                  </p>
+                </div>
+                <div class="chat-row reply">
+                  <img
+                    src="./assets/avatar-stable.svg"
+                    alt=""
+                    width="38"
+                    height="38"
+                  />
+                  <div>
+                    <span data-i18n="friend1">다정이</span>
+                    <p data-i18n="reply1">
+                      혼자 다 했다고? 고생 많았겠다.<br />일단 여기서 다 털어놔.
                     </p>
                   </div>
-                  <div class="chat-row reply">
-                    <img
-                      src="./assets/avatar-stable.svg"
-                      alt=""
-                      width="40"
-                      height="40"
-                    />
-                    <div>
-                      <span data-i18n="friend1">다정이 · 안정형</span>
-                      <p data-i18n="reply1">
-                        혼자 다 했다고? 고생 많았겠다.<br />일단 여기서 다
-                        털어놔.
-                      </p>
-                    </div>
-                  </div>
-                  <div class="chat-row reply">
-                    <img
-                      src="./assets/avatar-anxious.svg"
-                      alt=""
-                      width="40"
-                      height="40"
-                    />
-                    <div>
-                      <span data-i18n="friend2">공감이 · 불안형</span>
-                      <p data-i18n="reply2">
-                        내가 다 속상해 ㅠㅠ<br />너 혼자 얼마나 끙끙댔을 거야
-                      </p>
-                    </div>
-                  </div>
-                  <div class="chat-row reply">
-                    <img
-                      src="./assets/avatar-avoidant.svg"
-                      alt=""
-                      width="40"
-                      height="40"
-                    />
-                    <div>
-                      <span data-i18n="friend3">덤덤이 · 회피형</span>
-                      <p data-i18n="reply3">
-                        일단 오늘은 쉬자.<br />팀플 얘긴 내가 들어줄게.
-                      </p>
-                    </div>
+                </div>
+                <div class="chat-row reply">
+                  <img
+                    src="./assets/avatar-anxious.svg"
+                    alt=""
+                    width="38"
+                    height="38"
+                  />
+                  <div>
+                    <span data-i18n="friend2">공감이</span>
+                    <p data-i18n="reply2">
+                      내가 다 속상해 ㅠㅠ<br />너 혼자 얼마나 끙끙댔을 거야
+                    </p>
                   </div>
                 </div>
-                <div class="chat-bottom hand">
-                  <span data-i18n="demoBottom">여기선, 마음껏 털어놔.</span
-                  ><span aria-hidden="true">♡</span>
+                <div class="chat-row reply">
+                  <img
+                    src="./assets/avatar-avoidant.svg"
+                    alt=""
+                    width="38"
+                    height="38"
+                  />
+                  <div>
+                    <span data-i18n="friend3">덤덤이</span>
+                    <p data-i18n="reply3">
+                      일단 오늘은 쉬자.<br />팀플 얘긴 내가 들어줄게.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <span class="stage-caption" data-i18n="stageCaption"
-                >세 가지 성향, 각자의 방식으로 전하는 공감.</span
-              >
             </div>
+            <p class="demo-caption" data-i18n="demoLabel">
+              서비스 이해를 위한 대화 예시입니다.
+            </p>
           </div>
         </div>
-      </section>
-      <section class="statement wrap section" aria-label="Cande philosophy">
-        <span class="statement-star reveal" aria-hidden="true">✳</span>
-        <p class="reveal" data-i18n="statement">
-          기술은 더 가까이.<br />마음은 더 <span class="hand">가볍게.</span>
-        </p>
-        <span class="statement-small reveal" data-i18n="statementSmall"
-          >Cande가 만들어갈 일상의 모습입니다.</span
-        >
-      </section>
-      <section
-        id="contact"
-        class="contact section"
-        aria-labelledby="contact-title"
-      >
-        <div class="wrap">
-          <div class="section-label reveal">
-            <span>03 / SAY HELLO</span
-            ><span class="hand label-note" data-i18n="contactNote"
-              >반가운 이야기를 기다려요</span
-            >
+        <dl class="product-details">
+          <div>
+            <dt data-i18n="conversationLabel">대화</dt>
+            <dd data-i18n="conversationDetail">
+              AI 친구 1–3명을 골라 개인톡이나 단체톡으로 대화합니다.
+            </dd>
           </div>
-          <div class="contact-body reveal">
-            <div>
-              <h2 id="contact-title" data-i18n="contactTitle">
-                우리, 이야기해요<span class="hand">.</span>
-              </h2>
-              <p data-i18n="contactDescription">
-                서비스에 대한 궁금증부터 함께 만들고 싶은 일까지.<br />Cande에
-                편하게 들려주세요.
-              </p>
-            </div>
-            <a
-              class="contact-arrow"
-              href="mailto:cande.official4@gmail.com"
-              aria-label="Cande에 이메일 보내기"
-              data-label="emailLabel"
-              >↗</a
-            >
+          <div>
+            <dt data-i18n="profileLabel">친구 설정</dt>
+            <dd data-i18n="profileDetail">
+              닉네임, 프로필 이미지, 성향을 직접 정할 수 있습니다.
+            </dd>
           </div>
-          <a class="email-link reveal" href="mailto:cande.official4@gmail.com"
-            >cande.official4@gmail.com</a
-          >
-        </div>
+        </dl>
       </section>
     </main>
-    <footer class="footer wrap">
-      <div class="footer-top">
-        <a class="brand" href="#" aria-label="Cande home"
-          >Cande<span class="brand-dot">.</span></a
-        ><span data-i18n="footerSlogan">일상에, 작은 내 편.</span
-        ><a class="back-top" href="#"
-          ><span data-i18n="backTop">맨 위로</span> ↑</a
+    <footer class="footer page-width">
+      <div class="footer-main">
+        <a class="brand" href="#" aria-label="Cande home">Cande</a
+        ><a class="footer-email" href="mailto:cande.official4@gmail.com"
+          >cande.official4@gmail.com</a
         >
       </div>
       <div class="footer-bottom">
         <div class="business">
           <span data-i18n="businessName">상호 : 칸데(CANDE)</span
           ><span data-i18n="registration">사업자등록번호 : 798-35-01563</span
-          ><span data-i18n="taxType">일반과세자</span
-          ><a href="mailto:cande.official4@gmail.com"
-            ><span data-i18n="inquiry">문의</span> :
-            cande.official4@gmail.com</a
-          >
+          ><span data-i18n="taxType">일반과세자</span>
         </div>
-        <span class="copyright"
-          >© <span id="year">2026</span> Cande. All rights reserved.</span
-        >
+        <span class="copyright">© <span id="year">2026</span> Cande</span>
       </div>
     </footer>
   </body>
