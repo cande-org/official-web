@@ -1,4 +1,25 @@
 @font-face {
+  font-family: Pretendard;
+  src: url("./assets/Pretendard-Regular.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+@font-face {
+  font-family: Pretendard;
+  src: url("./assets/Pretendard-ExtraBold.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+}
+@font-face {
+  font-family: Pretendard;
+  src: url("./assets/Pretendard-Black.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 900;
+}
+@font-face {
   font-family: Munmak;
   src: url("./assets/MUNMAK_HAEBANCHE.otf") format("opentype");
   font-display: swap;
@@ -10,6 +31,10 @@
   --line: #dedfda;
   --surface: #edeee9;
   --paper: #fff;
+  --type-display: 64px;
+  --type-heading: 32px;
+  --type-body: 16px;
+  --type-lead: 20px;
 }
 * {
   box-sizing: border-box;
@@ -22,8 +47,8 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family:
-    "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  letter-spacing: -0.03em;
   -webkit-font-smoothing: antialiased;
 }
 a {
@@ -53,6 +78,7 @@ button:focus-visible {
 .hand {
   font-family: Munmak, sans-serif;
   font-weight: 400;
+  letter-spacing: normal;
 }
 .header {
   height: 95px;
@@ -63,12 +89,12 @@ button:focus-visible {
 }
 .brand {
   font-size: 29px;
-  font-weight: 750;
-  letter-spacing: -1.8px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   line-height: 1.1;
 }
 .service-link {
-  font-size: 13px;
+  font-size: var(--type-body);
   margin-left: auto;
   padding: 14px 0;
 }
@@ -80,7 +106,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--type-body);
 }
 .languages button {
   min-width: 34px;
@@ -112,36 +138,81 @@ button:focus-visible {
   top: 15px;
 }
 .intro {
-  display: grid;
-  grid-template-columns: 1.7fr 1fr;
-  gap: 7%;
-  align-items: end;
+  display: block;
   padding-block: 75px 78px;
 }
 .intro h1 {
-  font-size: clamp(112px, 17vw, 260px);
-  font-weight: 750;
-  letter-spacing: -0.078em;
-  line-height: 0.81;
-  margin: 0 0 8px -0.015em;
+  font-size: var(--type-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 0 0 28px -0.015em;
+  transition:
+    opacity 0.75s ease,
+    transform 0.9s cubic-bezier(0.2, 0.75, 0.2, 1);
 }
 .intro-copy {
   padding-bottom: 0;
+  max-width: 780px;
+  transition:
+    opacity 0.65s 0.16s ease,
+    transform 0.8s 0.16s cubic-bezier(0.2, 0.75, 0.2, 1);
 }
 .intro-copy > p:first-child {
-  font-size: clamp(22px, 2.1vw, 32px);
-  line-height: 1.55;
-  letter-spacing: -0.9px;
-  margin: 0 0 21px;
+  font-size: var(--type-lead);
+  line-height: 1.5;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
   font-weight: 500;
   word-break: keep-all;
 }
 .intro-detail {
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: var(--type-lead);
+  line-height: 1.5;
   color: var(--muted);
   margin: 0;
   word-break: keep-all;
+}
+@media (min-width: 801px) {
+  .intro-copy br {
+    display: none;
+  }
+}
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+.hero-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.hero-button.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.hero-button.secondary {
+  background: var(--paper);
+}
+.hero-button:hover {
+  transform: translateY(-2px);
+}
+.hero-button:active {
+  transform: scale(0.97);
 }
 .product {
   padding-top: 12px;
@@ -166,46 +237,63 @@ button:focus-visible {
   flex-shrink: 0;
 }
 .app-identity h2 {
-  font-size: 23px;
-  letter-spacing: -0.7px;
-  font-weight: 550;
+  font-size: var(--type-lead);
+  line-height: 1.5;
+  letter-spacing: -0.03em;
+  font-weight: 800;
   margin: 0;
   word-break: keep-all;
 }
 .product-heading > p {
-  font-size: 12px;
+  font-size: var(--type-body);
   color: var(--muted);
   margin: 0;
   flex-shrink: 0;
 }
 .product-stage {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6%;
-  padding: 65px 7% 48px;
+  grid-template-columns: minmax(360px, 1fr) minmax(360px, 420px);
+  gap: clamp(72px, 9vw, 138px);
+  padding: 76px 7.5% 58px;
   background: var(--surface);
   align-items: center;
   overflow: hidden;
 }
 .product-story {
   align-self: center;
-  max-width: 420px;
+  max-width: 460px;
 }
 .product-story h3 {
-  font-size: clamp(44px, 4.9vw, 74px);
-  line-height: 1.2;
-  letter-spacing: -2px;
+  font-size: var(--type-heading);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
   margin: 0 0 26px;
   word-break: keep-all;
 }
 .product-description {
-  max-width: 335px;
-  font-size: 15px;
-  line-height: 1.95;
-  letter-spacing: -0.2px;
+  max-width: 390px;
+  font-size: var(--type-body);
+  line-height: 1.5;
+  letter-spacing: -0.03em;
   color: #4f524c;
   margin: 0;
   word-break: keep-all;
+}
+.store-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.store-actions .hero-button {
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 400;
+}
+.store-status {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 .personas {
   display: flex;
@@ -217,6 +305,13 @@ button:focus-visible {
   margin: 0;
   text-align: center;
 }
+.persona-option {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
 .personas img {
   display: block;
   width: clamp(72px, 7vw, 104px);
@@ -224,15 +319,29 @@ button:focus-visible {
   transition: transform 0.25s ease;
   transform-origin: center bottom;
 }
-.personas figure:hover img {
-  transform: rotate(-8deg) translateY(-3px);
+.persona-option:hover img,
+.persona-option[aria-pressed="true"] img {
+  transform: translateY(-3px) scale(1.015);
 }
-.personas figure:nth-child(2):hover img {
-  transform: rotate(8deg) translateY(-3px);
-}
-.personas figcaption {
+.persona-option > span {
+  display: block;
   font-size: 18px;
   margin-top: 12px;
+}
+.persona-option[aria-pressed="true"] > span {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.persona-description {
+  min-height: 21px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.persona-description:empty {
+  visibility: hidden;
 }
 .chat-stage {
   width: 100%;
@@ -246,7 +355,10 @@ button:focus-visible {
   border-radius: 10px;
   overflow: hidden;
   transform-origin: 50% 80%;
-  transition: transform 0.85s cubic-bezier(0.2, 0.65, 0.25, 1);
+  transition:
+    opacity 0.65s ease,
+    transform 0.85s cubic-bezier(0.2, 0.65, 0.25, 1),
+    box-shadow 0.35s ease;
 }
 .chat-header {
   padding: 22px 21px;
@@ -341,7 +453,7 @@ button:focus-visible {
   display: flex;
   gap: 28px;
   align-items: baseline;
-  font-size: 13px;
+  font-size: var(--type-body);
   line-height: 1.8;
 }
 .product-details dt {
@@ -376,7 +488,7 @@ button:focus-visible {
   justify-content: space-between;
   gap: 25px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-body);
   line-height: 1.8;
 }
 .business {
@@ -387,43 +499,35 @@ button:focus-visible {
 .copyright {
   white-space: nowrap;
 }
-.js-motion .chat-stage:not(.visible) .chat-demo {
-  transform: translateY(22px) rotate(3deg);
-}
-.js-motion .chat-stage:not(.visible) .chat-row {
+.js-motion .chat-row:not(.visible) {
   opacity: 0;
   transform: translateY(12px);
 }
-.chat-row:nth-child(2) {
-  transition-delay: 0.15s;
+.js-motion .intro h1,
+.js-motion .intro-copy {
+  opacity: 0;
+  transform: translateY(28px);
 }
-.chat-row:nth-child(3) {
-  transition-delay: 0.35s;
-}
-.chat-row:nth-child(4) {
-  transition-delay: 0.55s;
+.js-motion.page-ready .intro h1,
+.js-motion.page-ready .intro-copy {
+  opacity: 1;
+  transform: none;
 }
 html[lang="en"] .product-story h3 {
-  font-size: clamp(40px, 4.5vw, 62px);
+  font-size: var(--type-heading);
 }
 html[lang="en"] .chat-row p {
   font-size: 16px;
 }
-html[lang="en"] .intro-copy > p:first-child {
-  letter-spacing: -0.4px;
-}
 html[lang="en"] .app-identity h2 {
-  font-size: 21px;
+  font-size: var(--type-lead);
 }
 @media (min-width: 1700px) {
   .intro {
-    padding-block: 100px;
+    padding-block: 75px 78px;
   }
   .product-stage {
     padding-block: 80px;
-  }
-  .product-story h3 {
-    font-size: 74px;
   }
 }
 @media (max-width: 1100px) {
@@ -431,25 +535,21 @@ html[lang="en"] .app-identity h2 {
     width: calc(100% - 72px);
   }
   .intro {
-    gap: 7%;
-    grid-template-columns: 1.5fr 1fr;
     padding-block: 65px;
   }
-  .intro h1 {
-    font-size: 16vw;
-  }
   .intro-copy > p:first-child {
-    font-size: 22px;
+    font-size: var(--type-heading);
   }
   .intro-detail {
-    font-size: 12px;
+    font-size: var(--type-body);
   }
   .product-stage {
+    grid-template-columns: minmax(320px, 1fr) minmax(330px, 390px);
     padding: 44px 5% 35px;
     gap: 7%;
   }
   .product-description {
-    font-size: 14px;
+    font-size: var(--type-body);
   }
   .personas {
     gap: 16px;
@@ -477,11 +577,17 @@ html[lang="en"] .app-identity h2 {
     height: 32px;
   }
   .product-details > div {
-    font-size: 12px;
+    font-size: var(--type-body);
     gap: 18px;
   }
 }
 @media (max-width: 800px) {
+  :root {
+    --type-display: 72px;
+    --type-heading: 28px;
+    --type-body: 15px;
+    --type-lead: 17px;
+  }
   .page-width {
     width: calc(100% - 40px);
   }
@@ -498,9 +604,9 @@ html[lang="en"] .app-identity h2 {
     padding-block: 48px 43px;
   }
   .intro h1 {
-    font-size: clamp(100px, 25vw, 190px);
+    font-size: var(--type-display);
     line-height: 0.9;
-    margin-left: -0.025em;
+    margin: 0 0 30px -0.025em;
   }
   .intro-copy {
     display: flex;
@@ -509,13 +615,16 @@ html[lang="en"] .app-identity h2 {
     align-items: flex-end;
   }
   .intro-copy > p:first-child {
-    font-size: 20px;
+    font-size: var(--type-lead);
     margin: 0;
     line-height: 1.5;
   }
   .intro-detail {
-    font-size: 12px;
-    line-height: 1.75;
+    font-size: var(--type-lead);
+    line-height: 1.5;
+  }
+  .hero-actions {
+    display: none;
   }
   .product {
     padding-top: 0;
@@ -533,14 +642,14 @@ html[lang="en"] .app-identity h2 {
     border-radius: 11px;
   }
   .app-identity h2 {
-    font-size: 20px;
+    font-size: var(--type-lead);
   }
   .product-heading > p {
-    font-size: 10px;
+    font-size: var(--type-body);
   }
   .product-stage {
     grid-template-columns: 1fr;
-    padding: 38px 24px 24px;
+    padding: 36px 20px 22px;
     gap: 36px;
   }
   .product-story {
@@ -548,15 +657,29 @@ html[lang="en"] .app-identity h2 {
     width: 100%;
   }
   .product-story h3 {
-    font-size: 49px;
-    line-height: 1.14;
+    font-size: var(--type-heading);
+    line-height: 1.25;
     margin-bottom: 20px;
-    letter-spacing: -1.5px;
+    letter-spacing: 0.02em;
   }
   .product-description {
     max-width: 360px;
+    font-size: var(--type-body);
+    line-height: 1.5;
+  }
+  .store-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .store-actions .hero-button {
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: 14px;
+  }
+  .store-status {
     font-size: 13px;
-    line-height: 1.9;
   }
   .personas {
     gap: 22px;
@@ -565,23 +688,28 @@ html[lang="en"] .app-identity h2 {
   .personas img {
     width: 68px;
   }
-  .personas figcaption {
+  .persona-option > span {
     font-size: 16px;
     margin-top: 7px;
   }
+  .persona-description {
+    font-size: 13px;
+    margin-top: 14px;
+    white-space: normal;
+  }
   .chat-stage {
     justify-self: center;
-    max-width: 390px;
+    max-width: 350px;
   }
   .chat-header {
     padding: 18px 15px;
   }
   .chat-messages {
-    padding: 24px 14px 27px;
-    gap: 23px;
+    padding: 22px 13px 25px;
+    gap: 21px;
   }
   .chat-row p {
-    font-size: 17px;
+    font-size: 16px;
   }
   .chat-row > img {
     width: 33px;
@@ -598,7 +726,7 @@ html[lang="en"] .app-identity h2 {
   }
   .product-details > div {
     gap: 18px;
-    font-size: 12px;
+    font-size: var(--type-body);
   }
   .product-details dt {
     min-width: 48px;
@@ -618,25 +746,25 @@ html[lang="en"] .app-identity h2 {
   .footer-bottom {
     flex-direction: column;
     gap: 16px;
-    font-size: 10px;
+    font-size: var(--type-body);
   }
   .business {
     gap: 3px 13px;
   }
   html[lang="en"] .app-identity h2 {
-    font-size: 16px;
+    font-size: var(--type-lead);
     max-width: 135px;
     line-height: 1.2;
   }
   html[lang="en"] .product-story h3 {
-    font-size: 45px;
+    font-size: var(--type-heading);
   }
   html[lang="en"] .intro-copy > p:first-child {
-    font-size: 20px;
+    font-size: var(--type-lead);
   }
   html[lang="en"] .intro-detail {
     max-width: 155px;
-    font-size: 11px;
+    font-size: var(--type-lead);
   }
   html[lang="en"] .chat-row p {
     font-size: 16px;
@@ -647,16 +775,16 @@ html[lang="en"] .app-identity h2 {
     gap: 16px;
   }
   .intro-copy > p:first-child {
-    font-size: 18px;
+    font-size: var(--type-lead);
   }
   .intro-detail {
-    font-size: 11px;
+    font-size: var(--type-lead);
   }
   .product-stage {
     padding-inline: 17px;
   }
   .product-story h3 {
-    font-size: 44px;
+    font-size: var(--type-heading);
   }
   .chat-messages {
     padding-inline: 12px;
@@ -688,7 +816,7 @@ html[lang="en"] .app-identity h2 {
     align-items: start;
   }
   html[lang="en"] .intro-copy > p:first-child {
-    font-size: 18px;
+    font-size: var(--type-lead);
   }
   html[lang="en"] .intro-detail {
     max-width: 137px;
@@ -707,8 +835,12 @@ html[lang="en"] .app-identity h2 {
     animation: none !important;
     transition: none !important;
   }
-  .js-motion .chat-stage:not(.visible) .chat-demo,
-  .js-motion .chat-stage:not(.visible) .chat-row {
+  .js-motion .chat-row:not(.visible) {
+    opacity: 1;
+    transform: none;
+  }
+  .js-motion .intro h1,
+  .js-motion .intro-copy {
     opacity: 1;
     transform: none;
   }
@@ -717,7 +849,7 @@ html[lang="en"] .app-identity h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 24px;
-  font-size: 12px;
+  font-size: var(--type-body);
   margin: 0 0 24px;
 }
 .legal-links a:first-child {
