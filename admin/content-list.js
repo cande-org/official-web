@@ -24,18 +24,24 @@ export function createContentLists({ getSnapshot, onSave, onStage, onError }) {
     const root=$(kind==='products'?'product-list':'faq-list');root.replaceChildren();
     const scroll=el('div',null,'collection-scroll');scroll.tabIndex=0;scroll.setAttribute('aria-label',kind==='products'?'상품 목록':'FAQ 목록');
     const table=el('table',null,'collection-table'),head=el('thead'),tr=el('tr'),body=el('tbody');
-    for(const label of ['순서',kind==='products'?'상품':'질문','상태',...(kind==='products'?['참고 가격']:[]),'관리']){const th=el('th',label);th.scope='col';tr.append(th);}head.append(tr);table.append(head,body);
+    for(const label of ['순서',kind==='products'?'상품':'질문','상태',...(kind==='products'?['참고 가격']:[]),'생성일 (KST)','수정일 (KST)','수정자','관리']){const th=el('th',label);th.scope='col';tr.append(th);}head.append(tr);table.append(head,body);
     for(const {item,index} of items.slice((view.page-1)*view.size,view.page*view.size)){
       const row=el('tr');row.dataset.key=keyOf(kind,item);row.append(el('td',String(index+1),'order-cell'));
       const name=el('td',null,'name-cell'),open=button(titleOf(kind,item),()=>openItem(kind,keyOf(kind,item)),'row-title');
       const summary=el('p',kind==='products'?item.description:item.answer,'row-summary');name.append(open,summary);row.append(name);
       const state=el('td');state.append(el('span',item.enabled?'노출 중':'숨김',`content-state ${item.enabled?'visible':'hidden-state'}`));row.append(state);
       if(kind==='products')row.append(el('td',`${Number(item.referencePriceKrw).toLocaleString('ko-KR')}원`,'price-cell'));
+      const audit=getSnapshot().metadata?.find(m=>m.kind===kind&&m.key===keyOf(kind,item));
+      for(const key of ['created_at','updated_at']){
+        const cell=el('td',null,'audit-date');
+        if(audit?.[key]){const date=new Date(audit[key]),time=el('time');time.dateTime=audit[key];time.title=date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});time.append(el('span',date.toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'})),el('small',date.toLocaleTimeString('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'})));cell.append(time);}row.append(cell);
+      }
+      row.append(el('td',audit?.updated_by_name??'','audit-name'));
       const actions=el('td',null,'row-actions');const detail=button('상세',()=>openItem(kind,keyOf(kind,item)));detail.setAttribute('aria-label',`${titleOf(kind,item)} 상세`);actions.append(detail);
       for(const [text,delta] of [['위로',-1],['아래로',1]]){const b=button(text,()=>{const next=structuredClone(getSnapshot().draft);[next[kind][index],next[kind][index+delta]]=[next[kind][index+delta],next[kind][index]];onStage(next);renderList(kind);});b.disabled=index+delta<0||index+delta>=list.length;b.setAttribute('aria-label',`${titleOf(kind,item)} ${text}`);actions.append(b);}row.append(actions);
       row.onclick=e=>{if(!e.target.closest('button,a,input,select'))openItem(kind,keyOf(kind,item));};body.append(row);
     }
-    if(!items.length){const row=el('tr'),cell=el('td',list.length?'검색 조건에 맞는 항목이 없습니다.':'등록된 FAQ가 없습니다. 질문을 추가해 주세요.','empty-list');cell.colSpan=kind==='products'?5:4;row.append(cell);body.append(row);}
+    if(!items.length){const row=el('tr'),cell=el('td',list.length?'검색 조건에 맞는 항목이 없습니다.':'등록된 FAQ가 없습니다. 질문을 추가해 주세요.','empty-list');cell.colSpan=kind==='products'?8:7;row.append(cell);body.append(row);}
     scroll.append(table);root.append(scroll);
     const pager=el('div',null,'pagination');const count=el('span',items.length?`${(view.page-1)*view.size+1}–${Math.min(view.page*view.size,items.length)} / ${items.length}개`:'0개','page-count');count.setAttribute('role','status');pager.append(count);
     const size=el('select');size.setAttribute('aria-label',`${kind==='products'?'상품':'FAQ'} 페이지당 항목 수`);for(const n of [5,10,20]){const o=el('option',`${n}개씩`);o.value=String(n);size.append(o);}size.value=String(view.size);size.onchange=()=>{view.size=Number(size.value);view.page=1;renderList(kind);};pager.append(size);

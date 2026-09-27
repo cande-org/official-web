@@ -1,3 +1,4 @@
+import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
 import { createContentLists } from './content-list.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createClient } from '@supabase/supabase-js';
@@ -77,16 +78,16 @@ async function request(body) {
   const { data, error: failure } = await client.functions.invoke('admin-content', { method: body ? 'POST' : 'GET', ...(body ? { body } : {}) });
   if (failure) {
     const code = failure.context?.status;
-    throw Error(code === 403 ? '관리자로 허용되지 않은 계정입니다. 담당자에게 접근 권한을 요청해 주세요.' : code === 409 ? '다른 관리자가 먼저 저장했습니다. 변경 내용을 복사한 뒤 서버 내용을 다시 불러와 주세요.' : code === 401 ? '로그인이 만료되었습니다. 다시 로그인해 주세요.' : '요청을 완료하지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.');
+    throw Object.assign(Error(code === 403 ? '관리자로 허용되지 않은 계정입니다. 담당자에게 접근 권한을 요청해 주세요.' : code === 409 ? '다른 관리자가 먼저 저장했습니다. 변경 내용을 복사한 뒤 서버 내용을 다시 불러와 주세요.' : code === 401 ? '로그인이 만료되었습니다. 다시 로그인해 주세요.' : '요청을 완료하지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.'), {status:code});
   }
   return data;
 }
 async function load() {
   if (busy) return;
   const generation = authGeneration;
-  busy = true; status('콘텐츠를 불러오는 중…');
+  busy = true; $('auth-retry').hidden = true; status('콘텐츠를 불러오는 중…');
   try { const result = await request(); if (generation !== authGeneration) return; snapshot = result; dirty = false; render(); status(''); }
-  catch (error) { status(error.message, true); }
+  catch (error) { status(error.message, true); if(!snapshot){$('auth-retry').hidden = [401,403].includes(error.status);$('login').hidden = ![401,403].includes(error.status);} }
   finally { busy = false; }
 }
 async function save(publish) {
@@ -135,7 +136,7 @@ $('signin').onclick = async () => {
 
 let adminsBusy = false;
 function clearAdmins() {
-  $('admin-list').replaceChildren(); $('admin-history').replaceChildren(); $('admin-email').value = ''; $('admin-status').textContent = '';
+  $('admin-list').replaceChildren(); $('admin-history').replaceChildren(); $('admin-email').value = ''; $('admin-name').value = ''; $('admin-status').textContent = '';
 }
 function renderAdmins(data) {
   $('admin-list').replaceChildren();
@@ -148,15 +149,19 @@ function renderAdmins(data) {
       if (confirm(`${admin.email} 계정을 ${label}할까요?`)) void loadAdmins({ action: admin.enabled ? 'disable' : 'enable', email: admin.email });
     });
     button.disabled = self; button.setAttribute('aria-label', `${admin.email} ${admin.enabled ? '권한 해제' : '다시 허용'}`);
-    box.append(info, button); $('admin-list').append(box);
+    const nameForm=node('form',null,'admin-name-form'),nameLabel=node('label','이름'),nameInput=node('input');
+    nameInput.value=admin.name??'';nameInput.maxLength=80;nameInput.setAttribute('aria-label',`${admin.email} 이름`);nameInput.placeholder='이름 입력';nameLabel.append(nameInput);
+    const nameSave=node('button','이름 저장');nameSave.type='submit';nameSave.setAttribute('aria-label',`${admin.email} 이름 저장`);
+    nameForm.append(nameLabel,nameSave);nameForm.onsubmit=e=>{e.preventDefault();void loadAdmins({action:'set_name',email:admin.email,name:nameInput.value.trim()});};
+    box.append(info, nameForm, button); $('admin-list').append(box);
   }
-  const labels = { add: '추가', enable: '다시 허용', disable: '권한 해제', bootstrap: '최초 등록' };
-  $('admin-history').replaceChildren(data.history.length ? metricTable(['시각 (KST)', '실행 관리자', '대상', '변경'], data.history.map(h => [new Date(h.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }), h.action === 'bootstrap' ? '최초 설정' : h.actor_email, h.target_email, labels[h.action] ?? h.action])) : node('p', '변경 이력이 없습니다.'));
+  const labels = { add: '추가', enable: '다시 허용', disable: '권한 해제', bootstrap: '최초 등록', set_name: '이름 변경' };
+  $('admin-history').replaceChildren(data.history.length ? metricTable(['시각 (KST)', '실행 관리자', '대상', '변경'], data.history.map(h => [new Date(h.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }), h.actor_name ?? '', h.target_email, labels[h.action] ?? h.action])) : node('p', '변경 이력이 없습니다.'));
 }
 async function loadAdmins(body) {
   if (!client || adminsBusy) return;
   adminsBusy = true; const generation = authGeneration;
-  $('admins').inert = true; $('admin-status').textContent = body ? '권한을 반영하는 중…' : '관리자 목록을 불러오는 중…';
+  $('admins').inert = true; $('admin-status').textContent = body ? '관리자 정보를 저장하는 중…' : '관리자 목록을 불러오는 중…';
   try {
     const { data, error } = await client.functions.invoke('admin-access', { method: body ? 'POST' : 'GET', ...(body ? { body } : {}) });
     if (generation !== authGeneration) return;
@@ -167,15 +172,21 @@ async function loadAdmins(body) {
         status('관리자 권한이 없거나 로그인이 만료되었습니다. 허용된 계정으로 다시 로그인해 주세요.', true);
         return;
       }
-      const messages = { admin_exists: '이미 등록된 계정입니다. 해제된 계정은 목록에서 다시 허용해 주세요.', admin_not_found: '목록이 변경되었습니다. 새로고침 후 다시 시도해 주세요.', invalid_email: '올바른 이메일 주소를 입력해 주세요.', last_admin: '마지막 관리자는 해제할 수 없습니다.', self_revoke: '현재 로그인한 본인의 권한은 해제할 수 없습니다.' };
+      const messages = { admin_exists: '이미 등록된 계정입니다. 해제된 계정은 목록에서 다시 허용해 주세요.', admin_not_found: '목록이 변경되었습니다. 새로고침 후 다시 시도해 주세요.', invalid_email: '올바른 이메일 주소를 입력해 주세요.', invalid_name: '이름은 80자 이내로 입력해 주세요.', last_admin: '마지막 관리자는 해제할 수 없습니다.', self_revoke: '현재 로그인한 본인의 권한은 해제할 수 없습니다.' };
       throw Error(messages[code] ?? '권한을 반영하지 못했습니다. 목록을 새로고침해 확인한 뒤 다시 시도해 주세요.');
     }
-    renderAdmins(data); if (body?.action === 'add') $('admin-email').value = '';
-    $('admin-status').textContent = body ? '관리자 권한을 반영했습니다.' : `허용된 관리자 ${data.admins.filter(a => a.enabled).length}명`;
+    renderAdmins(data); if (body?.action === 'add') { $('admin-email').value = ''; $('admin-name').value = ''; }
+    // Keep unsaved content and its revision while refreshing actor names.
+    if(body?.action==='set_name'){
+      const {data:latest,error:refreshError}=await client.functions.invoke('admin-content',{method:'GET'});
+      if(generation!==authGeneration)return;
+      if(!refreshError&&latest?.revision===snapshot?.revision){snapshot.metadata=latest.metadata;contentLists.render();}
+    }
+    $('admin-status').textContent = body ? '관리자 정보를 저장했습니다.' : `허용된 관리자 ${data.admins.filter(a => a.enabled).length}명`;
   } catch (error) { if (generation === authGeneration) { if (!body) { $('admin-list').replaceChildren(); $('admin-history').replaceChildren(); } $('admin-status').textContent = error.message; } }
   finally { adminsBusy = false; $('admins').inert = false; }
 }
-$('admin-add-form').addEventListener('submit', e => { e.preventDefault(); const email = $('admin-email').value.trim().toLowerCase(); if (confirm(`${email} 계정에 콘텐츠·지표·관리자 관리 권한을 부여할까요?`)) void loadAdmins({ action: 'add', email }); });
+$('admin-add-form').addEventListener('submit', e => { e.preventDefault(); const email = $('admin-email').value.trim().toLowerCase(); if (confirm(`${email} 계정에 콘텐츠·지표·관리자 관리 권한을 부여할까요?`)) void loadAdmins({ action: 'add', email, name: $('admin-name').value.trim() }); });
 $('admin-refresh').onclick = () => loadAdmins();
 
 function clearMetrics() {
@@ -266,15 +277,16 @@ async function loadMetrics() {
   finally { metricsBusy=false; $('metric-refresh').disabled=false; }
 }
 
+$('auth-retry').onclick = () => location.reload();
 try {
   const response = await fetch('/admin/config.json', { cache: 'no-store' });
   if (!response.ok) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
   const config = await response.json();
   if (!config.url || !config.key) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
-  client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: sessionStorage, storageKey: 'mental-content-admin', detectSessionInUrl: true } });
+  client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   const { data: { session }, error } = await client.auth.getSession();
   history.replaceState({}, '', '/admin');
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
-  if (session) { $('logout').hidden = false; await load(); } else status('관리자 계정으로 로그인해 주세요.');
+  if (session) { $('logout').hidden = false; await load(); } else { $('login').hidden = false; status('관리자 계정으로 로그인해 주세요.'); }
   client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; } });
-} catch (error) { status(error.message, true); }
+} catch (error) { $('auth-retry').hidden = false; status(error.message, true); }
