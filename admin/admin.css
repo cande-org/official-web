@@ -24,7 +24,7 @@ p{color:var(--muted)}
 .sidebar-brand a,.login-brand{font-size:29px;letter-spacing:-1.4px;font-weight:750;text-decoration:none;line-height:1}
 .brand-dot{color:#999}
 .workspace-name{display:flex;align-items:center;gap:10px;margin:33px 10px 20px}
-.workspace-mark{display:grid;place-items:center;width:34px;height:34px;border:1px solid #dadddf;border-radius:9px;background:#fff;font-weight:700;color:#32353b}
+.workspace-mark{display:block;flex:none;width:34px;height:34px;border:1px solid #dadddf;border-radius:9px;object-fit:cover;background:#fff}
 .workspace-name strong{display:block;font-size:13px}
 .workspace-name div>span{display:block;font-size:11px;color:var(--muted);margin-top:1px}
 .sidebar nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto}
