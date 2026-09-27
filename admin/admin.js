@@ -102,12 +102,56 @@ $('preview').onclick = () => {
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
 window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; $('metric-cards').replaceChildren(); $('metric-chart').replaceChildren(); $('metric-table').replaceChildren(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
+$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; clearMetrics(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
   const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${location.origin}/admin`, queryParams: { prompt: 'select_account' } } });
   if (error) status('로그인을 시작하지 못했습니다.', true);
 };
+
+function clearMetrics() {
+  for (const id of ['metric-cards','metric-chart','metric-table','growth-overview','growth-conversion','growth-retention','growth-commerce']) $(id).replaceChildren();
+}
+const number = value => Number(value ?? 0).toLocaleString('ko-KR');
+const ratio = (n,d) => d > 0 ? `${(100*n/d).toFixed(1)}% · ${number(n)} / ${number(d)}명` : '— 관찰 대상 없음';
+function metricCards(target, title, items, note) {
+  const section = $(target); section.replaceChildren(node('h3',title));
+  if(note) section.append(node('p',note,'metric-note'));
+  const cards=node('div',null,'metric-cards');
+  for(const [label,value,detail] of items){const card=node('article',null,'metric-card');card.append(node('span',label),node('strong',value));if(detail)card.append(node('small',detail));cards.append(card);}section.append(cards);
+}
+function metricTable(headers, rows) {
+  const table=node('table'),head=node('thead'),tr=node('tr'),body=node('tbody');
+  for(const label of headers){const th=node('th',label);th.scope='col';tr.append(th);}head.append(tr);table.append(head);
+  for(const values of rows){const row=node('tr');for(const value of values)row.append(node('td',value));body.append(row);}table.append(body);return table;
+}
+function renderGrowth(data) {
+  if(data.schemaVersion!==2){clearMetrics();throw Error('확장 지표를 준비 중입니다. 잠시 후 다시 조회해 주세요.');}
+  const g=data.growth,c=data.cohorts.summary,coverage=data.coverage;
+  const kst = value => new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+  metricCards('growth-overview','사용과 재방문',[
+    ['기간 활성 사용자',number(g.activeUsers)+'명','게스트·회원 합산, 중복 제거'],
+    ['기간 재방문율',g.activeUsers ? (100*g.returningUsers/g.activeUsers).toFixed(1)+'%' : '—',`${number(g.returningUsers)} / ${number(g.activeUsers)}명 · 다른 날 다시 활동`],
+    ['DAU / WAU / MAU',`${number(g.dau)} / ${number(g.wau)} / ${number(g.mau)}`,'최근 완결 1일 / 7일 / 30일의 고유 사용자']
+  ],`서버 활동 기준 · 최근 완결일 ${coverage.lastCompleteDay}. 신규 수집 시작 ${kst(coverage.growthStartedAt)}. 수집 시작 이전은 완전한 활동 이력이 아니며 초기 WAU·MAU는 일부 기간만 관찰됩니다.`);
+  const conversion=$('growth-conversion');conversion.replaceChildren(node('h3','가입 후 7일 전환'));
+  conversion.append(node('p',`선택 기간에 가입하고 168시간을 관찰한 회원 ${number(c.eligible7d)}명 · 관찰 대기 ${number(c.pending7d)}명. 수집 시작 이전 가입자는 제외합니다.`,'metric-note'));
+  const wrap=node('div',null,'table-scroll');wrap.tabIndex=0;wrap.setAttribute('aria-label','7일 전환 상세');wrap.append(metricTable(['단계','전환율 · 전환 / 대상'],[
+    ['회원가입 → 첫 채팅',ratio(c.chatConverted7d,c.eligible7d)],
+    ['회원가입 → 실제 구매',ratio(c.purchaseConverted7d,c.eligible7d)],
+    ['게스트 시작 → 회원가입',ratio(g.guestConverted7d,g.guestEligible7d)]
+  ]));conversion.append(wrap,node('p',c.medianFirstChatSeconds==null?'첫 채팅까지 중앙시간: — 관찰 대상 없음':`첫 채팅까지 중앙시간: ${(c.medianFirstChatSeconds/60).toLocaleString('ko-KR',{maximumFractionDigits:1})}분 · 7일 내 전환한 회원 기준`));
+  metricCards('growth-retention','가입 코호트 리텐션',['d1','d7','d30'].map(key=>[key.toUpperCase(),c[key].eligible ? (100*c[key].retained/c[key].eligible).toFixed(1)+'%' : '—',c[key].eligible ? `${number(c[key].retained)} / ${number(c[key].eligible)}명 · 해당 날짜 관찰 완료` : '관찰 대기 또는 가입 대상 없음']),'가입한 날을 D0으로 보고 정확히 1·7·30일 뒤 다시 서버 활동을 한 비율입니다. 끝나지 않은 날짜는 분모에서 제외합니다.');
+  const retention=node('div',null,'table-scroll');retention.tabIndex=0;retention.setAttribute('aria-label','가입 코호트별 리텐션');
+  if(data.cohorts.buckets.length)retention.append(metricTable(['가입 기간','가입','D1','D7','D30','7일 채팅','7일 구매','7일 관찰 대기'],data.cohorts.buckets.map(b=>[b.date,number(b.members),ratio(b.d1.retained,b.d1.eligible),ratio(b.d7.retained,b.d7.eligible),ratio(b.d30.retained,b.d30.eligible),ratio(b.chatConverted7d,b.eligible7d),ratio(b.purchaseConverted7d,b.eligible7d),number(b.pending7d)])));
+  else retention.append(node('p','수집 시작 이후의 가입 코호트가 아직 없습니다. 날짜가 쌓이면 표시됩니다.'));
+  $('growth-retention').append(retention);
+  metricCards('growth-commerce','결제·광고와 응답 품질',[
+    ['실제 결제',number(g.purchases)+'건',`구매 유저 ${number(g.buyers)}명 · 갱신 포함`],
+    ['광고 시청 완료',number(g.adViews)+'회',`시청 유저 ${number(g.adViewers)}명 · 서버 보상 검증 기준`],
+    ['AI 응답 실패율',g.succeeded+g.failed ? (100*g.failed/(g.succeeded+g.failed)).toFixed(1)+'%' : '—',`${number(g.failed)} / ${number(g.succeeded+g.failed)}건 · 결과 확정 기준`]
+  ],'Sandbox·목결제는 제외합니다. 베타에서 실제 결제·광고가 비활성이라면 0건일 수 있습니다. 구매는 순매출이 아닌 결제 경험입니다.');
+}
 
 let metricsBusy = false, metricsRequest = 0;
 const todayKst = () => new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
@@ -128,15 +172,18 @@ async function loadMetrics() {
     for (const [label,value] of [['누적 가입',data.totalMembers],['이번 주 가입',data.weekMembers],['현재 회원',data.currentMembers],['기간 내 채팅 유저',data.rangeChatUsers],['기간 내 방 생성 유저',data.rangeRoomUsers]]) {
       const card=node('article',null,'metric-card');card.append(node('span',label),node('strong',Number(value).toLocaleString('ko-KR')+'명'));cards.append(card);
     }
+    renderGrowth(data);
+    const growthByDate = new Map(data.growth.buckets.map(b=>[b.date,b]));
+    const rows = data.buckets.map(b=>({...b,...growthByDate.get(b.date)}));
     const max = Math.max(1,...data.buckets.map(b=>Number(b.members)));
     $('metric-chart').replaceChildren(node('h3','신규 가입 추이'));
     for (const b of data.buckets) { const row=node('div',null,'chart-row'),meter=node('meter');meter.min=0;meter.max=max;meter.value=Number(b.members);meter.setAttribute('aria-label',`${b.date} 가입 ${b.members}명`);row.append(node('span',b.date),meter,node('span',`${b.members}명`));$('metric-chart').append(row); }
-    const columns = [['date','기간 시작'],['members','가입'],['guests','게스트 시작'],['rooms','생성 방'],['roomUsers','방 생성 유저'],['chatUsers','채팅 유저'],['memberChatUsers','회원 채팅 유저'],['guestChatUsers','게스트 채팅 유저'],['turns','전송'],['succeeded','응답 성공'],['failed','실패']];
+    const columns = [['date','기간 시작'],['activeUsers','활성 유저'],['returningUsers','재방문 유저'],['purchases','구매 건'],['buyers','구매 유저'],['adViews','광고 완료'],['adViewers','광고 유저'],['members','가입'],['guests','게스트 시작'],['rooms','생성 방'],['roomUsers','방 생성 유저'],['chatUsers','채팅 유저'],['memberChatUsers','회원 채팅 유저'],['guestChatUsers','게스트 채팅 유저'],['turns','전송'],['succeeded','응답 성공'],['failed','실패']];
     const table=node('table'),head=node('thead'),tr=node('tr');for(const [,label] of columns)tr.append(node('th',label));head.append(tr);table.append(head);const body=node('tbody');
-    for(const b of data.buckets){const row=node('tr');for(const [key] of columns)row.append(node('td',key==='date'?b[key]:Number(b[key]).toLocaleString('ko-KR')));body.append(row);}table.append(body);$('metric-table').replaceChildren(table);
+    for(const b of rows){const row=node('tr');for(const [key] of columns)row.append(node('td',key==='date'?b[key]:Number(b[key]).toLocaleString('ko-KR')));body.append(row);}table.append(body);$('metric-table').replaceChildren(table);
     const time = value => value ? new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}) : '아직 처리 전';
     $('metric-status').textContent = `최근 집계 ${time(data.lastProcessedAt)} · 수집 시작 ${time(data.trackingStartedAt)} · 집계 대기 ${data.pendingEvents}건 · 알림 대기 ${data.pendingNotifications}건 / 실패 ${data.failedNotifications}건`;
-  } catch(error) { if(generation===authGeneration){$('metric-status').textContent=error.message;$('metric-cards').replaceChildren();$('metric-chart').replaceChildren();$('metric-table').replaceChildren();} }
+  } catch(error) { if(generation===authGeneration){$('metric-status').textContent=error.message;clearMetrics();} }
   finally { metricsBusy=false; $('metric-refresh').disabled=false; }
 }
 
@@ -150,5 +197,5 @@ try {
   history.replaceState({}, '', '/admin');
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
   if (session) { $('logout').hidden = false; await load(); } else status('관리자 계정으로 로그인해 주세요.');
-  client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; $('metric-cards').replaceChildren(); $('metric-chart').replaceChildren(); $('metric-table').replaceChildren(); $('login').hidden = false; } });
+  client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; clearMetrics(); $('login').hidden = false; } });
 } catch (error) { status(error.message, true); }

@@ -9,3 +9,7 @@
 - OAuth redirects: `https://cande.fyi/admin` and `https://www.cande.fyi/admin`.
 
 Run `npm ci`, `npm run check`, `npm run build`. Output is `dist/`. Existing homepage/legal pages are preserved. `/admin` has no-store, noindex and a restrictive CSP.
+
+Growth dashboard (2026-09-27): returning users and DAU/WAU/MAU use authenticated server activity (startup billing reads, room creation, accepted user turns), not every foreground/offline open. Signup cohorts show exact KST D1/D7/D30 only after the return day is complete. Signup→chat/purchase and guest→member conversion use a 168-hour window; immature cohorts and pre-collection signups are excluded. Each rate includes numerator/denominator. Purchases are verified positive-price PRODUCTION transactions, including renewals, excluding sandbox/free trials; later refunds do not erase prior purchase experience. Ad views mean verified rewarded completions, not impressions. Outcome failure rate uses completed results. Collection coverage, empty/maturing states and privacy-safe aggregates are visible; raw user identities are never returned.
+
+Backend contract: `mb_metrics_dashboard_v2` / schemaVersion 2. Billing activity writes run via EdgeRuntime.waitUntil, then the existing minute-based outbox worker aggregates them. No new app SDK, mobile build or Slack message is required for this addition.
