@@ -3,7 +3,7 @@ export function createContentLists({ getSnapshot, onSave, onStage, onError }) {
   const $ = id => document.getElementById(id);
   const el = (tag,text,cls) => { const n=document.createElement(tag); if(text!=null)n.textContent=text;if(cls)n.className=cls;return n; };
   const button = (text,run,cls) => {const b=el('button',text,cls);b.type='button';b.onclick=run;return b;};
-  const views={products:{page:1,size:5,query:'',filter:'all'},faqs:{page:1,size:5,query:'',filter:'all'}};
+  const views={products:{page:1,size:20,query:'',filter:'all'},faqs:{page:1,size:20,query:'',filter:'all'}};
   let edit=null, saving=false, epoch=0;
   const dialog=$('item-dialog');
   const titleOf=(kind,item)=>kind==='products'?item.title:item.question;
