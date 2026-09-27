@@ -1,6 +1,8 @@
+import { createContentLists } from './content-list.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
+let contentLists;
 let client, snapshot, dirty = false, busy = false, activeTab = 'dashboard', authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
@@ -17,6 +19,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
+  if (!visible) contentLists?.reset();
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -43,50 +46,12 @@ const pageMeta = {
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
-function field(label, value, onInput, { type = 'text', maxLength, wide = false } = {}) {
-  const wrapper = node('label', label, wide ? 'wide' : '');
-  const input = node(type === 'textarea' ? 'textarea' : 'input');
-  if (type !== 'textarea') input.type = type;
-  input.value = value; input.required = true;
-  if (maxLength) input.maxLength = maxLength;
-  if (type === 'number') { input.min = '1'; input.max = '1000000'; input.step = '1'; }
-  if (type === 'textarea') input.rows = 5;
-  input.addEventListener('input', () => { onInput(type === 'number' ? Number(input.value) : input.value); markDirty(); });
-  wrapper.append(input); return wrapper;
-}
 function action(text, handler) { const b = node('button', text); b.type = 'button'; b.addEventListener('click', handler); return b; }
-function itemTop(list, item, index, title, removable = false) {
-  const top = node('div', null, 'item-top'); top.append(node('h3', title));
-  const check = node('label', null, 'check'), input = node('input'); input.type = 'checkbox'; input.checked = item.enabled;
-  input.addEventListener('change', () => { item.enabled = input.checked; markDirty(); }); check.append(input, document.createTextNode('앱에 노출')); top.append(check);
-  for (const [label, delta] of [['위로', -1], ['아래로', 1]]) {
-    const b = action(label, () => { [list[index], list[index + delta]] = [list[index + delta], list[index]]; markDirty(); render(); });
-    b.disabled = index + delta < 0 || index + delta >= list.length; b.setAttribute('aria-label', `${title} ${label}`); top.append(b);
-  }
-  if (removable) top.append(action('삭제', () => { if (confirm('이 질문을 초안에서 삭제할까요? 공개 전까지 앱에는 유지됩니다.')) { list.splice(index, 1); markDirty(); render(); } }));
-  return top;
-}
 function render() {
   shell(true); $('login').hidden = true; $('editor').hidden = false; $('logout').hidden = false;
   $('revision').textContent = `초안 v${snapshot.revision} · 공개 v${snapshot.published_revision} · ${new Date(snapshot.published_at).toLocaleString('ko-KR')}`;
   $('dirty').textContent = dirty ? '저장하지 않은 변경사항' : '저장된 초안';
-  const products = snapshot.draft.products; $('product-list').replaceChildren();
-  products.forEach((p, i) => {
-    const contract = snapshot.contracts.find((c) => c.key === p.key);
-    const box = node('article', null, 'item'); box.append(itemTop(products, p, i, p.title));
-    box.append(node('p', `${contract.id} · ${contract.subscription ? '매월' : '구매당'} ${contract.credits}회 지급`, 'contract'));
-    const fields = node('div', null, 'fields');
-    fields.append(field('상품 이름', p.title, (v) => p.title = v, { maxLength: 40 }), field('참고 가격 (원)', p.referencePriceKrw, (v) => p.referencePriceKrw = v, { type: 'number' }), field('상품 소개', p.description, (v) => p.description = v, { maxLength: 160, wide: true }));
-    box.append(fields); $('product-list').append(box);
-  });
-  const faqs = snapshot.draft.faqs; $('faq-list').replaceChildren();
-  faqs.forEach((f, i) => {
-    const box = node('article', null, 'item'); box.append(itemTop(faqs, f, i, `질문 ${i + 1}`, true));
-    const fields = node('div', null, 'fields'); fields.append(field('질문', f.question, (v) => f.question = v, { maxLength: 160, wide: true }), field('답변', f.answer, (v) => f.answer = v, { type: 'textarea', maxLength: 3000, wide: true }));
-    const label = node('label', '답변 아래 연결'), select = node('select');
-    for (const [value, title] of [['none', '없음'], ['passes', '내 이용권 이동하기']]) { const option = node('option', title); option.value = value; select.append(option); }
-    select.value = f.action; select.addEventListener('change', () => { f.action = select.value; markDirty(); }); label.append(select); fields.append(label); box.append(fields); $('faq-list').append(box);
-  });
+  contentLists.render();
   $('payment-notice').value = snapshot.draft.paymentNotice;
   selectTab(activeTab);
 }
@@ -136,11 +101,22 @@ async function save(publish) {
   catch (error) { status(error.message, true); }
   finally { busy = false; $('editor').inert = false; }
 }
+async function saveItemContent(content) {
+  if (busy) throw Error('다른 요청을 처리 중입니다. 잠시 후 다시 시도해 주세요.');
+  const generation = authGeneration;
+  busy = true; $('editor').inert = true;
+  try {
+    const result = await request({ action: 'save', revision: snapshot.revision, content });
+    if (generation !== authGeneration) throw Error('로그인이 변경되었습니다. 다시 로그인해 주세요.');
+    snapshot = result; dirty = false; render(); status('초안을 저장했습니다. 앱 반영은 ‘앱에 공개’를 눌러 주세요.');
+  } finally { busy = false; $('editor').inert = false; }
+}
+contentLists = createContentLists({ getSnapshot: () => snapshot, onSave: saveItemContent, onStage: content => { snapshot.draft = content; markDirty(); }, onError: message => status(message,true) });
 $('form').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
 $('publish').onclick = () => save(true);
 $('reload').onclick = () => { if (!dirty || confirm('저장하지 않은 변경사항을 버리고 다시 불러올까요?')) load(); };
 $('payment-notice').oninput = (e) => { snapshot.draft.paymentNotice = e.target.value; markDirty(); };
-$('add-faq').onclick = () => { if (snapshot.draft.faqs.length >= 50) return status('질문은 최대 50개까지 등록할 수 있습니다.', true); snapshot.draft.faqs.push({ id: crypto.randomUUID(), question: '', answer: '', enabled: true, action: 'none' }); markDirty(); render(); $('faq-list').lastElementChild.querySelector('input:not([type=checkbox])').focus(); };
+$('add-faq').onclick = () => contentLists.addFaq();
 document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => selectTab(b.dataset.tab));
 $('preview').onclick = () => {
   const body = $('preview-body'); body.replaceChildren();
@@ -149,7 +125,7 @@ $('preview').onclick = () => {
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
-window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (dirty || contentLists?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
 $('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
