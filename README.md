@@ -76,3 +76,9 @@ SVG 경로는 변경하지 않았으며 말풍선은 CSS border-image의 9분할
 - `npm run build`가 두 문서와 스타일을 `dist/`에 포함합니다.
 - 국외처리 세부 내역은 아직 실제 계약·설정 확인이 필요한 시행 예정안입니다.
   [확인 근거와 운영 보완 사항](docs/legal-review.md)을 확인하세요.
+
+## 운영 관리자
+
+`https://cande.fyi/admin`은 Supabase가 검증한 Google 계정과 비공개 허용 목록으로 접근을 제어합니다. `관리자` 탭에서 이메일 추가, 권한 해제, 다시 허용, 최근 50건의 변경 이력을 제공합니다. 모든 관리자는 같은 권한이며 별도 초대 메일은 보내지 않습니다. 본인·마지막 관리자 해제는 서버에서도 막고, 동시 변경은 직렬화합니다. 해제된 계정의 다음 API 요청부터 거부합니다.
+
+서버는 mental 저장소의 `server/supabase/functions/admin-access` 및 `202609270007_admin_access.sql`입니다. 초기 허용 이메일은 운영 DB에만 등록하고 소스에는 넣지 않습니다. 빌드에는 `ADMIN_SUPABASE_URL`, `ADMIN_SUPABASE_PUBLISHABLE_KEY`만 사용하며 서버 비밀값은 웹에 포함하지 않습니다.

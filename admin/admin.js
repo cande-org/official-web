@@ -53,9 +53,10 @@ function render() {
 }
 function selectTab(tab) {
   activeTab = tab;
-  $('form').hidden = tab === 'dashboard';
+  $('form').hidden = ['dashboard', 'admins'].includes(tab);
   if (tab === 'dashboard') void loadMetrics();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice']) $(name).hidden = name !== tab;
+  if (tab === 'admins') void loadAdmins();
+  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -102,12 +103,57 @@ $('preview').onclick = () => {
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
 window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; clearMetrics(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
+$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
   const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${location.origin}/admin`, queryParams: { prompt: 'select_account' } } });
   if (error) status('로그인을 시작하지 못했습니다.', true);
 };
+
+let adminsBusy = false;
+function clearAdmins() {
+  $('admin-list').replaceChildren(); $('admin-history').replaceChildren(); $('admin-email').value = ''; $('admin-status').textContent = '';
+}
+function renderAdmins(data) {
+  $('admin-list').replaceChildren();
+  for (const admin of data.admins) {
+    const box = node('article', null, 'item admin-item'), info = node('div');
+    const self = admin.email === data.currentEmail;
+    info.append(node('strong', admin.email), node('p', `${admin.enabled ? '허용됨' : '해제됨'}${self ? ' · 현재 로그인 계정' : ''}`));
+    const button = action(admin.enabled ? '권한 해제' : '다시 허용', () => {
+      const label = admin.enabled ? '관리자에서 해제' : '관리자로 다시 허용';
+      if (confirm(`${admin.email} 계정을 ${label}할까요?`)) void loadAdmins({ action: admin.enabled ? 'disable' : 'enable', email: admin.email });
+    });
+    button.disabled = self; button.setAttribute('aria-label', `${admin.email} ${admin.enabled ? '권한 해제' : '다시 허용'}`);
+    box.append(info, button); $('admin-list').append(box);
+  }
+  const labels = { add: '추가', enable: '다시 허용', disable: '권한 해제', bootstrap: '최초 등록' };
+  $('admin-history').replaceChildren(data.history.length ? metricTable(['시각 (KST)', '실행 관리자', '대상', '변경'], data.history.map(h => [new Date(h.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }), h.action === 'bootstrap' ? '최초 설정' : h.actor_email, h.target_email, labels[h.action] ?? h.action])) : node('p', '변경 이력이 없습니다.'));
+}
+async function loadAdmins(body) {
+  if (!client || adminsBusy) return;
+  adminsBusy = true; const generation = authGeneration;
+  $('admins').inert = true; $('admin-status').textContent = body ? '권한을 반영하는 중…' : '관리자 목록을 불러오는 중…';
+  try {
+    const { data, error } = await client.functions.invoke('admin-access', { method: body ? 'POST' : 'GET', ...(body ? { body } : {}) });
+    if (generation !== authGeneration) return;
+    if (error) {
+      let code; try { code = (await error.context.clone().json()).error; } catch { /* network failure */ }
+      if ([401,403].includes(error.context?.status)) {
+        authGeneration++; snapshot = null; dirty = false; clearMetrics(); clearAdmins(); $('editor').hidden = true; $('login').hidden = false;
+        status('관리자 권한이 없거나 로그인이 만료되었습니다. 허용된 계정으로 다시 로그인해 주세요.', true);
+        return;
+      }
+      const messages = { admin_exists: '이미 등록된 계정입니다. 해제된 계정은 목록에서 다시 허용해 주세요.', admin_not_found: '목록이 변경되었습니다. 새로고침 후 다시 시도해 주세요.', invalid_email: '올바른 이메일 주소를 입력해 주세요.', last_admin: '마지막 관리자는 해제할 수 없습니다.', self_revoke: '현재 로그인한 본인의 권한은 해제할 수 없습니다.' };
+      throw Error(messages[code] ?? '권한을 반영하지 못했습니다. 목록을 새로고침해 확인한 뒤 다시 시도해 주세요.');
+    }
+    renderAdmins(data); if (body?.action === 'add') $('admin-email').value = '';
+    $('admin-status').textContent = body ? '관리자 권한을 반영했습니다.' : `허용된 관리자 ${data.admins.filter(a => a.enabled).length}명`;
+  } catch (error) { if (generation === authGeneration) { if (!body) { $('admin-list').replaceChildren(); $('admin-history').replaceChildren(); } $('admin-status').textContent = error.message; } }
+  finally { adminsBusy = false; $('admins').inert = false; }
+}
+$('admin-add-form').addEventListener('submit', e => { e.preventDefault(); const email = $('admin-email').value.trim().toLowerCase(); if (confirm(`${email} 계정에 콘텐츠·지표·관리자 관리 권한을 부여할까요?`)) void loadAdmins({ action: 'add', email }); });
+$('admin-refresh').onclick = () => loadAdmins();
 
 function clearMetrics() {
   for (const id of ['metric-cards','metric-chart','metric-table','growth-overview','growth-conversion','growth-retention','growth-commerce']) $(id).replaceChildren();
@@ -197,5 +243,5 @@ try {
   history.replaceState({}, '', '/admin');
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
   if (session) { $('logout').hidden = false; await load(); } else status('관리자 계정으로 로그인해 주세요.');
-  client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; clearMetrics(); $('login').hidden = false; } });
+  client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; clearMetrics(); clearAdmins(); $('login').hidden = false; } });
 } catch (error) { status(error.message, true); }
