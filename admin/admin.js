@@ -1,8 +1,47 @@
+import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
 let client, snapshot, dirty = false, busy = false, activeTab = 'dashboard', authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
+const mobileMenu = matchMedia('(max-width: 760px)');
+let menuOpen = false;
+function setMenu(open, restoreFocus = true) {
+  menuOpen = open && mobileMenu.matches;
+  document.body.classList.toggle('menu-open', menuOpen);
+  $('menu-backdrop').hidden = !menuOpen;
+  $('menu-toggle').setAttribute('aria-expanded', String(menuOpen));
+  $('workspace').inert = menuOpen;
+  $('sidebar').inert = mobileMenu.matches && !menuOpen;
+  if (menuOpen) $('menu-close').focus();
+  else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
+}
+function shell(visible) {
+  document.body.classList.toggle('signed-in', visible);
+  $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
+  setMenu(false, false);
+}
+$('menu-toggle').onclick = () => setMenu(true);
+$('menu-close').onclick = () => setMenu(false);
+$('menu-backdrop').onclick = () => setMenu(false);
+mobileMenu.addEventListener('change', () => setMenu(false, false));
+document.addEventListener('keydown', e => {
+  if (!menuOpen) return;
+  if (e.key === 'Escape') { e.preventDefault(); setMenu(false); }
+  if (e.key === 'Tab') {
+    const items = [...$('sidebar').querySelectorAll('a,button:not([disabled])')].filter(el => !el.hidden);
+    const first = items[0], last = items.at(-1);
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+const pageMeta = {
+  dashboard: ['대시보드', '서비스의 사용과 성장을 한눈에 확인하세요.'],
+  products: ['상점 상품', '상품의 노출, 순서와 소개를 관리하세요.'],
+  faqs: ['자주 묻는 질문', '사용자가 궁금해하는 질문과 답변을 관리하세요.'],
+  notice: ['결제 안내', '상점 하단에 표시되는 결제 안내를 편집하세요.'],
+  admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
+};
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
 function field(label, value, onInput, { type = 'text', maxLength, wide = false } = {}) {
   const wrapper = node('label', label, wide ? 'wide' : '');
@@ -28,7 +67,7 @@ function itemTop(list, item, index, title, removable = false) {
   return top;
 }
 function render() {
-  $('login').hidden = true; $('editor').hidden = false; $('logout').hidden = false;
+  shell(true); $('login').hidden = true; $('editor').hidden = false; $('logout').hidden = false;
   $('revision').textContent = `초안 v${snapshot.revision} · 공개 v${snapshot.published_revision} · ${new Date(snapshot.published_at).toLocaleString('ko-KR')}`;
   $('dirty').textContent = dirty ? '저장하지 않은 변경사항' : '저장된 초안';
   const products = snapshot.draft.products; $('product-list').replaceChildren();
@@ -52,9 +91,17 @@ function render() {
   selectTab(activeTab);
 }
 function selectTab(tab) {
+  const changed = activeTab !== tab;
   activeTab = tab;
+  $('page-title').textContent = pageMeta[tab][0];
+  $('page-description').textContent = pageMeta[tab][1];
+  $('breadcrumb-current').textContent = pageMeta[tab][0];
+  $('reload').hidden = ['dashboard', 'admins'].includes(tab);
+  $('revision').hidden = ['dashboard', 'admins'].includes(tab);
+  if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
+  if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
   $('form').hidden = ['dashboard', 'admins'].includes(tab);
-  if (tab === 'dashboard') void loadMetrics();
+  if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
   if (tab === 'admins') void loadAdmins();
   for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
@@ -73,7 +120,7 @@ async function load() {
   if (busy) return;
   const generation = authGeneration;
   busy = true; status('콘텐츠를 불러오는 중…');
-  try { const result = await request(); if (generation !== authGeneration) return; snapshot = result; dirty = false; render(); status('공개된 내용은 앱에서 화면을 다시 열 때 반영됩니다.'); }
+  try { const result = await request(); if (generation !== authGeneration) return; snapshot = result; dirty = false; render(); status(''); }
   catch (error) { status(error.message, true); }
   finally { busy = false; }
 }
@@ -103,7 +150,7 @@ $('preview').onclick = () => {
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
 window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
+$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
   const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${location.origin}/admin`, queryParams: { prompt: 'select_account' } } });
@@ -140,7 +187,7 @@ async function loadAdmins(body) {
     if (error) {
       let code; try { code = (await error.context.clone().json()).error; } catch { /* network failure */ }
       if ([401,403].includes(error.context?.status)) {
-        authGeneration++; snapshot = null; dirty = false; clearMetrics(); clearAdmins(); $('editor').hidden = true; $('login').hidden = false;
+        authGeneration++; snapshot = null; dirty = false; clearMetrics(); clearAdmins(); $('editor').hidden = true; shell(false); $('login').hidden = false;
         status('관리자 권한이 없거나 로그인이 만료되었습니다. 허용된 계정으로 다시 로그인해 주세요.', true);
         return;
       }
@@ -156,6 +203,7 @@ $('admin-add-form').addEventListener('submit', e => { e.preventDefault(); const 
 $('admin-refresh').onclick = () => loadAdmins();
 
 function clearMetrics() {
+  clearCharts();
   for (const id of ['metric-cards','metric-chart','metric-table','growth-overview','growth-conversion','growth-retention','growth-commerce']) $(id).replaceChildren();
 }
 const number = value => Number(value ?? 0).toLocaleString('ko-KR');
@@ -191,6 +239,11 @@ function renderGrowth(data) {
   const retention=node('div',null,'table-scroll');retention.tabIndex=0;retention.setAttribute('aria-label','가입 코호트별 리텐션');
   if(data.cohorts.buckets.length)retention.append(metricTable(['가입 기간','가입','D1','D7','D30','7일 채팅','7일 구매','7일 관찰 대기'],data.cohorts.buckets.map(b=>[b.date,number(b.members),ratio(b.d1.retained,b.d1.eligible),ratio(b.d7.retained,b.d7.eligible),ratio(b.d30.retained,b.d30.eligible),ratio(b.chatConverted7d,b.eligible7d),ratio(b.purchaseConverted7d,b.eligible7d),number(b.pending7d)])));
   else retention.append(node('p','수집 시작 이후의 가입 코호트가 아직 없습니다. 날짜가 쌓이면 표시됩니다.'));
+  disposeChart('retention-chart');
+  if (['d1','d7','d30'].some(key => c[key].eligible > 0)) {
+    const chart = node('div',null,'echart retention-chart'); chart.id = 'retention-chart';
+    $('growth-retention').append(chart); renderRetention(c);
+  } else $('growth-retention').append(node('p','리텐션 관찰 기간이 지나면 그래프가 표시됩니다.','empty-chart'));
   $('growth-retention').append(retention);
   metricCards('growth-commerce','결제·광고와 응답 품질',[
     ['실제 결제',number(g.purchases)+'건',`구매 유저 ${number(g.buyers)}명 · 갱신 포함`],
@@ -221,9 +274,13 @@ async function loadMetrics() {
     renderGrowth(data);
     const growthByDate = new Map(data.growth.buckets.map(b=>[b.date,b]));
     const rows = data.buckets.map(b=>({...b,...growthByDate.get(b.date)}));
-    const max = Math.max(1,...data.buckets.map(b=>Number(b.members)));
-    $('metric-chart').replaceChildren(node('h3','신규 가입 추이'));
-    for (const b of data.buckets) { const row=node('div',null,'chart-row'),meter=node('meter');meter.min=0;meter.max=max;meter.value=Number(b.members);meter.setAttribute('aria-label',`${b.date} 가입 ${b.members}명`);row.append(node('span',b.date),meter,node('span',`${b.members}명`));$('metric-chart').append(row); }
+    disposeChart('trend-chart');
+    const heading = node('div',null,'chart-heading');
+    heading.append(node('h3','가입과 활성 사용자 추이'),node('span',`${start} — ${end}`));
+    const chart = node('div',null,'echart trend-chart'); chart.id = 'trend-chart';
+    $('metric-chart').replaceChildren(heading,chart);
+    renderTrend(rows);
+    if (!rows.some(b => b.members > 0)) $('metric-chart').append(node('p','선택 기간에 신규 가입이 없습니다.','chart-note'));
     const columns = [['date','기간 시작'],['activeUsers','활성 유저'],['returningUsers','재방문 유저'],['purchases','구매 건'],['buyers','구매 유저'],['adViews','광고 완료'],['adViewers','광고 유저'],['members','가입'],['guests','게스트 시작'],['rooms','생성 방'],['roomUsers','방 생성 유저'],['chatUsers','채팅 유저'],['memberChatUsers','회원 채팅 유저'],['guestChatUsers','게스트 채팅 유저'],['turns','전송'],['succeeded','응답 성공'],['failed','실패']];
     const table=node('table'),head=node('thead'),tr=node('tr');for(const [,label] of columns)tr.append(node('th',label));head.append(tr);table.append(head);const body=node('tbody');
     for(const b of rows){const row=node('tr');for(const [key] of columns)row.append(node('td',key==='date'?b[key]:Number(b[key]).toLocaleString('ko-KR')));body.append(row);}table.append(body);$('metric-table').replaceChildren(table);
@@ -243,5 +300,5 @@ try {
   history.replaceState({}, '', '/admin');
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
   if (session) { $('logout').hidden = false; await load(); } else status('관리자 계정으로 로그인해 주세요.');
-  client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; clearMetrics(); clearAdmins(); $('login').hidden = false; } });
+  client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; } });
 } catch (error) { status(error.message, true); }

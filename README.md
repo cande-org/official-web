@@ -82,3 +82,9 @@ SVG 경로는 변경하지 않았으며 말풍선은 CSS border-image의 9분할
 `https://cande.fyi/admin`은 Supabase가 검증한 Google 계정과 비공개 허용 목록으로 접근을 제어합니다. `관리자` 탭에서 이메일 추가, 권한 해제, 다시 허용, 최근 50건의 변경 이력을 제공합니다. 모든 관리자는 같은 권한이며 별도 초대 메일은 보내지 않습니다. 본인·마지막 관리자 해제는 서버에서도 막고, 동시 변경은 직렬화합니다. 해제된 계정의 다음 API 요청부터 거부합니다.
 
 서버는 mental 저장소의 `server/supabase/functions/admin-access` 및 `202609270007_admin_access.sql`입니다. 초기 허용 이메일은 운영 DB에만 등록하고 소스에는 넣지 않습니다. 빌드에는 `ADMIN_SUPABASE_URL`, `ADMIN_SUPABASE_PUBLISHABLE_KEY`만 사용하며 서버 비밀값은 웹에 포함하지 않습니다.
+
+### 사이드바·대시보드 디자인
+
+2026-09-27: 좌측 메뉴를 분석/콘텐츠/설정으로 구분하고, 모바일에서는 포커스 제한·Escape·배경 닫기를 지원하는 메뉴를 사용합니다. 콘텐츠 탭 전환 시 초안은 보존됩니다. 대시보드는 Apache ECharts 6.1.0의 선/막대·툴팁·범례·35구간 초과 확대 슬라이더를 제공합니다. SVG 렌더러와 필요한 모듈만 번들링하며 외부 차트 CDN/분석 서버에 데이터를 보내지 않습니다. ResizeObserver/로그아웃/새 데이터 조회 시 크기 조정과 인스턴스 정리를 수행합니다. 미성숙 리텐션은 null로 표시하고 표의 분모/분자를 유지합니다.
+
+참고: [Linear 사이드바·설정](https://linear.app/changelog/2024-12-18-personalized-sidebar), [Stripe 대시보드 정보 구조](https://docs.stripe.com/dashboard/basics), [ECharts 모듈 가져오기](https://echarts.apache.org/handbook/en/basics/import/). 이 사이트에 맞춘 구현이며 해당 제품의 화면을 복제하지 않았습니다.

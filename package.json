@@ -7,13 +7,14 @@
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/serve.mjs --dist",
-    "check": "node --check main.js && node --check scripts/serve.mjs && node --check scripts/build.mjs && node --check admin/admin.js"
+    "check": "node --check main.js && node --check scripts/serve.mjs && node --check scripts/build.mjs && node --check admin/admin.js && node --check admin/charts.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.99.1",
+    "echarts": "6.1.0",
     "esbuild": "0.25.12"
   }
 }
