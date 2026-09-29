@@ -307,3 +307,31 @@ h1{font-size:25px}
 .prompt-score select{font-size:11px;padding:5px;min-height:30px}
 @media(max-width:1150px){.prompt-layout{grid-template-columns:1fr}.prompt-result-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.prompt-result-pair{grid-template-columns:1fr}.prompt-rollback{flex-wrap:wrap}.prompt-rollback button{width:100%}.prompt-score{gap:4px}}
+
+#announcements>.section-heading{margin-bottom:12px}
+#announcements>.helper{margin-bottom:18px}
+#announcements .table-scroll{margin-bottom:12px}
+#announcements table{width:100%;border-collapse:collapse}
+#announcements th,#announcements td{padding:12px 14px;text-align:left;border-bottom:1px solid #eceef0;font-size:12px}
+#announcements th{color:#6e7580;background:#f7f8fa;font-size:11px}
+#announcements .editable-row{cursor:pointer}
+#announcements .editable-row:hover,#announcements .editable-row:focus-visible{background:#f3f6fa;outline:0}
+#announcements>.collection-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:32px}
+#announcement-count{margin-right:auto;color:#6e7580;font-size:11px}
+.push-form{display:grid;gap:14px}
+.push-form label,#announcement-form label{display:grid;gap:7px;font-size:12px;font-weight:600;color:#464c56}
+.push-form input,.push-form textarea,.push-form select,#announcement-form input,#announcement-form textarea,#announcement-form select{width:100%;padding:10px 12px;border:1px solid #d9dde3;border-radius:6px;background:#fff;color:#20242b;font:inherit;resize:vertical}
+.push-filters{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:10px}
+.push-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.push-actions .primary{margin-left:auto}
+#push-recipient-count{font-size:12px;color:#515a66}
+#announcement-status{min-height:24px;margin:12px 0 24px;font-size:12px}
+#announcement-dialog{width:min(560px,calc(100vw - 30px));border:1px solid #dce0e5;border-radius:10px;padding:24px;box-shadow:0 20px 80px #11182733}
+#announcement-dialog::backdrop{background:#11182788}
+#announcement-form{display:grid;gap:15px}
+#announcement-form .checkbox-row{display:flex;align-items:center;gap:8px}
+#announcement-form .checkbox-row input{width:auto}
+#announcement-form .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+#announcement-delete{margin-right:auto}
+@media(max-width:900px){.push-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.push-filters{grid-template-columns:1fr}.push-actions .primary{margin-left:0}}

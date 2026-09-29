@@ -1,11 +1,13 @@
 import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
 import { createContentLists } from './content-list.js';
 import { createPromptStudio } from './prompt-studio.js';
+import { createAnnouncements } from './announcements.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
 let contentLists;
 let promptStudio;
+let announcements;
 let client, snapshot, dirty = false, busy = false, activeTab = 'dashboard', authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
@@ -22,7 +24,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { contentLists?.reset(); promptStudio?.clear(); }
+  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -47,6 +49,7 @@ const pageMeta = {
   faqs: ['자주 묻는 질문', '사용자가 궁금해하는 질문과 답변을 관리하세요.'],
   notice: ['결제 안내', '상점 하단에 표시되는 결제 안내를 편집하세요.'],
   prompts: ['프롬프트 실험실', '세 친구의 성향을 다듬고 실제 응답을 비교하세요.'],
+  announcements: ['공지사항 · 푸시', '앱 공지를 관리하고 회원에게 알림을 보내세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
@@ -65,15 +68,16 @@ function selectTab(tab) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['dashboard', 'admins', 'prompts'].includes(tab);
-  $('revision').hidden = ['dashboard', 'admins', 'prompts'].includes(tab);
+  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements'].includes(tab);
+  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['dashboard', 'admins', 'prompts'].includes(tab);
+  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
   if (tab === 'admins') void loadAdmins();
   if (tab === 'prompts') void promptStudio.load();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts']) $(name).hidden = name !== tab;
+  if (tab === 'announcements') void announcements.load();
+  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -289,6 +293,7 @@ try {
   const config = await response.json();
   if (!config.url || !config.key) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
   client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  announcements = createAnnouncements(() => client);
   const { data: { session }, error } = await client.auth.getSession();
   history.replaceState({}, '', '/admin');
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
