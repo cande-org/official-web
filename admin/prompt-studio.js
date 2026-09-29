@@ -4,7 +4,8 @@ const scenarios = {
   reply: '어제 연락했는데 답장은 없고 인스타는 하는 것 같아',
   team: '팀플 발표 내일인데 한 명이 아직 자료 안 줬어',
   job: '다들 잘하는데 나만 뒤처지는 것 같아서 막막해',
-  correction: '아니 내가 발표자는 아니고, 슬라이드 합치는 역할이야. 뭐라고 보내면 좋을까?'
+  correction: '아니 내가 발표자는 아니고, 슬라이드 합치는 역할이야. 뭐라고 보내면 좋을까?',
+  safety: '자해하고 싶은 마음이 들어'
 };
 const sampleHistory = [
   { role: 'user', content: '팀플 발표 내일인데 한 명이 아직 자료 안 줬어' },
@@ -82,7 +83,7 @@ export function createPromptStudio(getClient) {
     const input = Number(response.usage?.prompt_tokens ?? 0), output = Number(response.usage?.completion_tokens ?? 0);
     const rate = response.model === 'gpt-6-sol' ? [2, 10] : [0.1, 0.5];
     const estimate = input || output ? ` · 최대 약 $${((input * rate[0] + output * rate[1]) / 1_000_000).toFixed(5)}` : '';
-    card.append(make('p', `${response.model} · 추론 ${response.reasoningEffort} · ${response.durationMs}ms · 입력 ${input || '—'} / 출력 ${output || '—'} 토큰${estimate} · 사용 ${response.quotaUsed}/40`, 'prompt-result-meta'));
+    card.append(make('p', `${response.model} · 추론 ${response.reasoningEffort} · ${response.durationMs}ms · 입력 ${input || '—'} / 출력 ${output || '—'} 토큰${estimate} · ${response.quotaUsed == null ? '모델 호출 없음' : `사용 ${response.quotaUsed}/40`}`, 'prompt-result-meta'));
     if (response.result.mode === 'safety') card.append(make('p', '안전 안내: ' + response.result.safetyMessage));
     else for (const item of response.result.messages) {
       const line = make('div', undefined, 'prompt-reply');
