@@ -7,7 +7,7 @@
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/serve.mjs --dist",
-    "check": "node --check main.js && node --check scripts/serve.mjs && node --check scripts/build.mjs && node --check admin/admin.js && node --check admin/charts.js && node --check admin/content-list.js && node --check admin/auth-storage.js"
+    "check": "node --check main.js && node --check scripts/serve.mjs && node --check scripts/build.mjs && node --check admin/admin.js && node --check admin/charts.js && node --check admin/content-list.js && node --check admin/auth-storage.js && node --check admin/prompt-studio.js"
   },
   "engines": {
     "node": ">=20"

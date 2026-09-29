@@ -266,3 +266,44 @@ h1{font-size:25px}
 .collection-table{min-width:1120px}.collection-table th:nth-last-child(4),.collection-table th:nth-last-child(3){width:122px}.collection-table th:nth-last-child(2){width:110px}.audit-date{font-variant-numeric:tabular-nums;font-size:11px;color:#667080}.audit-date time span,.audit-date time small{display:block}.audit-date time small{margin-top:4px;color:#9198a4;font-size:10px}.audit-name{font-size:12px;overflow-wrap:anywhere}.admin-item>div:first-child{flex:1;min-width:0}.admin-name-form{display:flex;align-items:end;gap:8px}.admin-name-form label{font-size:11px;color:#737b88}.admin-name-form input{width:150px;margin-top:5px}.admin-name-form button{white-space:nowrap}.admin-add-row #admin-name{max-width:180px}.admin-item strong{overflow-wrap:anywhere}@media(max-width:1000px){.admin-item{flex-wrap:wrap}.admin-item>div:first-child{flex-basis:100%}}@media(max-width:760px){.admin-add-row{flex-wrap:wrap}.admin-add-row #admin-email{flex-basis:100%}.admin-add-row #admin-name{max-width:none;flex:1}.admin-name-form{flex:1}.admin-name-form label{flex:1}.admin-name-form input{width:100%}}
 
 .collection-table{min-width:960px}.collection-table th,.collection-table td{padding-left:12px;padding-right:12px}.collection-table th:first-child{width:48px}.collection-table th:nth-child(3){width:76px}.collection-table th:last-child{width:160px}#products .collection-table th:nth-child(4){width:98px}.collection-table th:nth-last-child(4),.collection-table th:nth-last-child(3){width:100px}.collection-table th:nth-last-child(2){width:88px}
+
+/* Prompt studio uses the same restrained admin surface as the content editor. */
+.prompt-intro{margin-bottom:20px;background:#f8f8f9}
+.prompt-intro .eyebrow{font-size:10px;letter-spacing:1.3px;font-weight:700;color:#737a85}
+.prompt-intro h2{font-size:23px;letter-spacing:-.7px;margin:7px 0}
+.prompt-intro p{font-size:13px;max-width:760px;line-height:1.75}
+.prompt-meta{margin-top:16px;font-size:11px;color:#68707b;font-variant-numeric:tabular-nums}
+.prompt-layout{display:grid;grid-template-columns:minmax(300px,.85fr) minmax(420px,1.15fr);gap:20px;align-items:start}
+.prompt-fields{display:grid;gap:18px;margin:20px 0}
+.prompt-fields label{font-size:14px;color:#292d35;font-weight:650}
+.prompt-fields small{font-size:11px;color:#808793;font-weight:400}
+.prompt-fields textarea{min-height:128px;font-size:13px;line-height:1.75}
+.prompt-actions{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.prompt-actions button{min-height:38px}
+#prompt-status,#prompt-test-status{font-size:12px;min-height:20px;line-height:1.6}
+#prompt-status.error,#prompt-test-status.error{color:#b32936}
+.prompt-history{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.prompt-history h3{font-size:13px;margin-bottom:12px}
+.prompt-rollback{display:flex;gap:8px}
+.prompt-rollback select{flex:1}
+.prompt-history .helper,.prompt-lab>.helper{display:block;font-size:11px;line-height:1.65;color:#858b95;margin-top:10px}
+.prompt-lab{display:grid;gap:14px}
+.prompt-lab .section-heading{margin-bottom:3px}
+.prompt-lab label{font-size:12px}
+.prompt-lab textarea{min-height:96px}
+.prompt-lab>.helper{margin-top:0}
+.prompt-results{display:grid;gap:16px}
+.prompt-result-row{border-top:1px solid var(--line);padding-top:18px}
+.prompt-case-title{font-size:13px;margin-bottom:12px;line-height:1.55}
+.prompt-result-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.prompt-result-card{border:1px solid #e3e5e8;background:#fafafb;border-radius:7px;padding:16px;min-width:0}
+.prompt-result-card h3{font-size:13px;margin-bottom:8px}
+.prompt-result-meta{font-size:10px;line-height:1.6;color:#808793;margin-bottom:16px;overflow-wrap:anywhere}
+.prompt-reply{padding:10px 0;border-top:1px solid #e9eaed}
+.prompt-reply strong{font-size:11px;color:#555c66}
+.prompt-reply p{font-size:13px;line-height:1.7;color:#272c34;margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.prompt-score{border-top:1px solid #e9eaed;margin-top:4px;padding-top:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.prompt-score label{font-size:10px;color:#727984}
+.prompt-score select{font-size:11px;padding:5px;min-height:30px}
+@media(max-width:1150px){.prompt-layout{grid-template-columns:1fr}.prompt-result-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.prompt-result-pair{grid-template-columns:1fr}.prompt-rollback{flex-wrap:wrap}.prompt-rollback button{width:100%}.prompt-score{gap:4px}}
