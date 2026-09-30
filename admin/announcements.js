@@ -13,7 +13,7 @@ export function createAnnouncements(client) {
   let data = { announcements: [], campaigns: [], pushReady: false };
   const views = { announcements: { page: 1, size: 20, query: '', filter: 'all' }, push: { page: 1, size: 20, query: '' } };
   let current = null, busy = false, preview = null, previewTicket = 0, generation = 0;
-  const state = (kind, message, error = false) => { const target = $(`${kind}-status`); target.textContent = message; target.classList.toggle('error', error); };
+  const state = (kind, message, error = false) => { const target = $(`${kind === 'announcements' ? 'announcement' : 'push'}-status`); target.textContent = message; target.classList.toggle('error', error); };
   const dialogState = (kind, message) => { $(`${kind}-dialog-status`).textContent = message; };
   async function request(payload) {
     const { data: session } = await client().auth.getSession();
