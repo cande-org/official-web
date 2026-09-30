@@ -42,18 +42,18 @@ export function createAnnouncements(client) {
     const view = views.announcements, query = view.query.trim().toLocaleLowerCase('ko-KR');
     const list = data.announcements.filter(item => (view.filter === 'all' || Boolean(item.published_at) === (view.filter === 'published')) && (!query || `${item.title} ${item.body}`.toLocaleLowerCase('ko-KR').includes(query)));
     const pages = Math.max(1, Math.ceil(list.length / view.size)); view.page = Math.min(view.page, pages);
-    const { wrapper, body } = table(['제목', '상태', '이동 화면', '생성일 (KST)', '수정일 (KST)', '수정자', '관리']);
+    const { wrapper, body } = table(['제목', '상태', '생성일 (KST)', '수정일 (KST)', '수정자', '관리']);
     wrapper.setAttribute('aria-label', '공지사항 목록');
     for (const item of list.slice((view.page - 1) * view.size, view.page * view.size)) {
       const row = el('tr');
       const name = el('td', null, 'name-cell');
       name.append(button(item.title, () => openAnnouncement(item), 'row-title'), el('p', item.body, 'row-summary')); row.append(name);
       const status = el('td'); status.append(el('span', item.published_at ? '공개 중' : '초안', `content-state ${item.published_at ? 'visible' : 'hidden-state'}`)); row.append(status);
-      cell(row, screens[item.target_screen] ?? '—'); cell(row, date(item.created_at), 'audit-date'); cell(row, date(item.updated_at), 'audit-date'); cell(row, item.updated_by_name ?? '—', 'audit-name');
+      cell(row, date(item.created_at), 'audit-date'); cell(row, date(item.updated_at), 'audit-date'); cell(row, item.updated_by_name ?? '—', 'audit-name');
       const action = el('td', null, 'row-actions'); action.append(button('상세', () => openAnnouncement(item))); row.append(action);
       row.onclick = event => { if (!event.target.closest('button,a,input,select')) openAnnouncement(item); }; body.append(row);
     }
-    if (!list.length) { const row = el('tr'), empty = el('td', data.announcements.length ? '검색 조건에 맞는 공지사항이 없습니다.' : '등록된 공지사항이 없습니다. 새 공지를 추가해 주세요.', 'empty-list'); empty.colSpan = 7; row.append(empty); body.append(row); }
+    if (!list.length) { const row = el('tr'), empty = el('td', data.announcements.length ? '검색 조건에 맞는 공지사항이 없습니다.' : '등록된 공지사항이 없습니다. 새 공지를 추가해 주세요.', 'empty-list'); empty.colSpan = 6; row.append(empty); body.append(row); }
     $('announcement-list').replaceChildren(wrapper); pager('announcements', list.length, pages);
   }
   function openPushDetail(item) {
@@ -91,7 +91,6 @@ export function createAnnouncements(client) {
     $('announcement-dialog-title').textContent = item ? '공지사항 상세' : '새 공지';
     $('announcement-title').value = item?.title ?? '';
     $('announcement-body').value = item?.body ?? '';
-    $('announcement-screen').value = item?.target_screen ?? 'announcements';
     $('announcement-published').checked = Boolean(item?.published_at);
     $('announcement-delete').hidden = !item; dialogState('announcement', '');
     $('announcement-dialog').showModal(); $('announcement-title').focus();
@@ -100,7 +99,7 @@ export function createAnnouncements(client) {
     event.preventDefault(); if (busy) return;
     busy = true; $('announcement-form').inert = true; dialogState('announcement', '저장 중…');
     try {
-      await request({ action: 'save', id: current?.id, title: $('announcement-title').value.trim(), body: $('announcement-body').value.trim(), targetScreen: $('announcement-screen').value, published: $('announcement-published').checked });
+      await request({ action: 'save', id: current?.id, title: $('announcement-title').value.trim(), body: $('announcement-body').value.trim(), targetScreen: current?.target_screen ?? 'announcements', published: $('announcement-published').checked });
       $('announcement-dialog').close(); await load(); state('announcements', '공지사항을 저장했습니다.');
     } catch (error) { dialogState('announcement', error.message); }
     finally { busy = false; $('announcement-form').inert = false; }
