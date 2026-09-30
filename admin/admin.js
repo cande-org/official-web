@@ -49,7 +49,8 @@ const pageMeta = {
   faqs: ['자주 묻는 질문', '사용자가 궁금해하는 질문과 답변을 관리하세요.'],
   notice: ['결제 안내', '상점 하단에 표시되는 결제 안내를 편집하세요.'],
   prompts: ['프롬프트 실험실', '세 친구의 성향을 다듬고 실제 응답을 비교하세요.'],
-  announcements: ['공지사항 · 푸시', '앱 공지를 관리하고 회원에게 알림을 보내세요.'],
+  announcements: ['공지사항', '앱에 표시할 공지를 관리하세요.'],
+  push: ['푸시 알림', '발송 이력을 확인하고 새 알림을 보내세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
@@ -68,16 +69,16 @@ function selectTab(tab) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements'].includes(tab);
-  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements'].includes(tab);
+  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push'].includes(tab);
+  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements'].includes(tab);
+  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
   if (tab === 'admins') void loadAdmins();
   if (tab === 'prompts') void promptStudio.load();
-  if (tab === 'announcements') void announcements.load();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements']) $(name).hidden = name !== tab;
+  if (tab === 'announcements' || tab === 'push') void announcements.load();
+  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
