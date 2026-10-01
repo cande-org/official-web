@@ -349,7 +349,7 @@ h1{font-size:25px}
 .push-form{display:grid;gap:14px}
 .push-form label,#announcement-form label{display:grid;gap:7px;font-size:12px;font-weight:600;color:#464c56}
 .push-form input,.push-form textarea,.push-form select,#announcement-form input,#announcement-form textarea,#announcement-form select{width:100%;padding:10px 12px;border:1px solid #d9dde3;border-radius:6px;background:#fff;color:#20242b;font:inherit;resize:vertical}
-.push-filters{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:10px}
+.push-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .push-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .push-actions .primary{margin-left:auto}
 #push-recipient-count{font-size:12px;color:#515a66}
@@ -369,17 +369,12 @@ h1{font-size:25px}
 @media(max-width:900px){.push-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.push-filters{grid-template-columns:1fr}.push-actions .primary{margin-left:0}#push-detail-fields{grid-template-columns:1fr;gap:4px}#push-detail-fields dd{margin-bottom:10px}}
 
-.push-icons{border:0;margin:0;padding:0;min-width:0}
-.push-icons legend{font-size:12px;font-weight:600;color:#464c56;margin-bottom:10px}
-.push-icon-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.push-form .push-icon-options label{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border:1px solid #d9dde3;border-radius:6px;cursor:pointer}
-.push-icon-options label:has(input:checked){border-color:#315ee8;background:#f0f4ff;box-shadow:inset 0 0 0 1px #315ee8}
-.push-form .push-icon-options input{width:16px;height:16px;padding:0;position:absolute;top:8px;left:8px;accent-color:#315ee8}
-.push-icon-options svg,.push-icon-preview{width:24px;height:24px;fill:#464c56;margin-top:8px}
-.push-icon-preview{display:grid;place-items:center;background:#464c56;color:white;border-radius:5px;font-size:10px}
 .push-schedule{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .push-form label[hidden]{display:none}
 .push-metric-cell{white-space:nowrap;font-variant-numeric:tabular-nums}
 #push-detail-status{color:#b32936;font-size:12px}
 #push-detail-status:empty{display:none}
-@media(max-width:520px){.push-schedule{grid-template-columns:1fr}.push-icon-options{gap:6px}}
+@media(max-width:520px){.push-schedule{grid-template-columns:1fr}}
+
+.push-member-field{grid-column:1/-1}
+.push-member-field textarea{min-height:84px;max-height:240px}

@@ -16,3 +16,12 @@ export function clickMetrics(item) {
   const sent = Number(item.sent_count ?? 0), tracked = Number(item.trackable_sent_count ?? 0), opened = Number(item.opened_count ?? 0);
   return { sent, tracked, opened, rate: tracked ? `${(100 * opened / tracked).toFixed(1)}%` : '—', summary: tracked ? `${(100 * opened / tracked).toFixed(1)}% · ${opened} / ${tracked}` : '집계 대상 없음' };
 }
+
+export function memberUids(value) {
+  const ids = value.trim().split(/[\s,;]+/).filter(Boolean).map(id => id.toLowerCase());
+  if (!ids.length && value.trim()) throw Error('회원 UID를 입력하거나 입력란을 비워 주세요.');
+  if (ids.some(id => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id))) throw Error('올바른 회원 UID를 입력해 주세요. 줄바꿈이나 쉼표로 구분할 수 있습니다.');
+  const unique = [...new Set(ids)].sort();
+  if (unique.length > 100) throw Error('회원 UID는 최대 100명까지 지정할 수 있습니다.');
+  return unique;
+}

@@ -31,7 +31,10 @@ try {
  assert(await page.locator('#push-cancel-reservation').isVisible());if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/push-detail.png'});
  await page.locator('#push-cancel-reservation').click();await page.locator('#push-status').getByText('예약을 취소했습니다.',{exact:true}).waitFor();
  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/push-history.png'});await page.locator('#push-add').click();assert(!(await page.locator('#push-scheduled-field').isVisible()));
- await page.locator('#push-title').fill('새 알림');await page.locator('#push-body').fill('새 본문');await page.locator('[name="push-icon"][value="star"]').check();
+ await page.locator('#push-title').fill('새 알림');await page.locator('#push-body').fill('새 본문');assert.equal(await page.locator('[name="push-icon"]').count(),0);
+ const ids=['a7a2bc52-c0db-44d3-8a7a-4a57a3e6aaac','b7a2bc52-c0db-44d3-8a7a-4a57a3e6aaac'];
+ await page.locator('#push-user-ids').fill(',;');await page.locator('#push-preview').click();await page.locator('#push-dialog-status').getByText('회원 UID를 입력하거나 입력란을 비워 주세요.',{exact:true}).waitFor();assert.equal((await page.evaluate(()=>window.calls)).filter(c=>c.action==='preview').length,0);
+ await page.locator('#push-user-ids').fill(ids[1]+','+ids[0]+'\n'+ids[0].toUpperCase());
  await page.locator('#push-timing').selectOption('scheduled');assert(await page.locator('#push-scheduled-field').isVisible());
  const time=new Date(Date.now()+86400000+9*3600000).toISOString().slice(0,16);await page.locator('#push-scheduled-at').fill(time);
  await page.locator('#push-send').click();await page.locator('#push-dialog-status').getByText('먼저 대상 수를 확인해 주세요.',{exact:true}).waitFor();
@@ -39,11 +42,11 @@ try {
  if(process.env.QA_SCREENSHOT_DIR){fs.mkdirSync(process.env.QA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/push-schedule-desktop.png'});}
  await page.locator('#push-send').click();await page.locator('#push-dialog-status').getByText(/요청을 완료하지 못/).waitFor();
  await page.locator('#push-send').click();await page.locator('#push-status').getByText(/발송을 예약했습니다/).waitFor();
- const calls=await page.evaluate(()=>window.calls);const sends=calls.filter(c=>c.action==='send');assert.equal(sends.length,2);assert.equal(sends[0].requestId,sends[1].requestId);assert.equal(sends[0].iconKey,'star');assert.equal(sends[0].scheduledAt,new Date(time+'+09:00').toISOString());
- await page.locator('#push-add').click();assert(await page.locator('[name="push-icon"][value="default"]').isChecked());
+ const calls=await page.evaluate(()=>window.calls);const sends=calls.filter(c=>c.action==='send');assert.equal(sends.length,2);assert.equal(sends[0].requestId,sends[1].requestId);assert.equal(sends[0].iconKey,'default');assert.deepEqual(sends[0].audience.userIds,ids);assert.deepEqual(calls.find(c=>c.action==='preview').audience.userIds,ids);assert.equal(sends[0].scheduledAt,new Date(time+'+09:00').toISOString());
+ await page.locator('#push-add').click();assert.equal(await page.locator('#push-user-ids').inputValue(),'');
  await page.setViewportSize({width:390,height:844});await page.locator('#push-timing').selectOption('scheduled');
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  assert(await page.locator('#push-dialog').evaluate(d=>d.scrollWidth<=d.clientWidth));
  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/push-schedule-mobile.png'});
- assert.deepEqual(errors,[]);console.log('PASS real browser: DOM wiring, detail CTR, cancel, preview gate, KST schedule, retry UUID, icon reset, 390px overflow');
+ assert.deepEqual(errors,[]);console.log('PASS real browser: DOM wiring, detail CTR, cancel, preview gate, KST schedule, retry UUID, multi-UID validation/dedup/payload/reset, no presets, 390px overflow');
 } finally {await browser.close();}

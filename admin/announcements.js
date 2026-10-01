@@ -1,4 +1,4 @@
-import { iconNames, scheduledTime, clickMetrics } from './push-controls.js';
+import { iconNames, scheduledTime, clickMetrics, memberUids } from './push-controls.js';
 const $ = (id) => document.getElementById(id);
 const screens = { announcements: '공지사항', friends: '친구', rooms: '채팅 목록', my: '마이페이지', store: '상점' };
 const statusNames = { scheduled: '예약됨', queued: '대기 중', sending: '발송 중', complete: '완료', failed: '실패 포함', canceled: '예약 취소' };
@@ -7,7 +7,7 @@ const button = (text, handler, className) => { const node = el('button', text, c
 const date = value => value ? new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '—';
 const audienceLabel = audience => {
   if (!audience || !Object.keys(audience).length) return '전체 허용 기기';
-  return [audience.userId && `회원 ID ${audience.userId}`, audience.activeWithinDays && `최근 ${audience.activeWithinDays}일 활동`, audience.joinedWithinDays && `가입 ${audience.joinedWithinDays}일 이내`, audience.subscription && (audience.subscription === 'active' ? '구독 중' : '구독 없음')].filter(Boolean).join(' · ');
+  return [audience.userId && `회원 UID ${audience.userId}`, Array.isArray(audience.userIds) && `지정 회원 ${audience.userIds.length}명`, audience.activeWithinDays && `최근 ${audience.activeWithinDays}일 활동`, audience.joinedWithinDays && `가입 ${audience.joinedWithinDays}일 이내`, audience.subscription && (audience.subscription === 'active' ? '구독 중' : '구독 없음')].filter(Boolean).join(' · ');
 };
 
 export function createAnnouncements(client) {
@@ -23,7 +23,7 @@ export function createAnnouncements(client) {
     const { data: result, error } = await client().functions.invoke('admin-announcements', payload ? { method: 'POST', body: payload } : { method: 'GET' });
     if (error) {
       let code; try { code = (await error.context.clone().json()).error; } catch { /* Network error. */ }
-      const messages = { invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_icon: '아이콘을 다시 선택해 주세요.' };
+      const messages = { invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_user_ids: '회원 UID를 확인해 주세요. 최대 100명까지 지정할 수 있습니다.', invalid_user_id: '올바른 회원 UID를 입력해 주세요.' };
       throw Error(messages[code] ?? '공지사항·푸시 요청을 완료하지 못했습니다. 다시 시도해 주세요.');
     }
     return result;
@@ -66,7 +66,7 @@ export function createAnnouncements(client) {
     currentPush = item;
     const metrics = clickMetrics(item);
     const fields = $('push-detail-fields'); fields.replaceChildren();
-    for (const [label, value] of [['제목', item.title], ['본문', item.body], ['아이콘', iconNames[item.icon_key] ?? '앱 기본'], ['이동 화면', screens[item.target_screen] ?? '—'], ['대상', audienceLabel(item.audience)], ['상태', statusNames[item.status] ?? item.status], ['등록일 (KST)', date(item.created_at)], ['발송 시각 (KST)', date(item.scheduled_at)], ['완료일 (KST)', date(item.completed_at)], ['대상 기기', `${item.recipient_count ?? 0}대`], ['발송 성공 / 실패', `${metrics.sent} / ${item.failed_count ?? 0}건`], ['클릭', `${metrics.opened}건 (집계 지원 앱 · 기기별 1회)`], ['클릭률', metrics.summary], ['집계 범위', `클릭 집계 지원 앱에 발송 성공한 ${metrics.tracked}건 / 전체 성공 ${metrics.sent}건. 발송 성공은 FCM 접수 기준이며 실제 화면 노출을 보장하지 않습니다.`]]) {
+    for (const [label, value] of [['제목', item.title], ['본문', item.body], ['아이콘', iconNames[item.icon_key] ?? '앱 기본'], ['이동 화면', screens[item.target_screen] ?? '—'], ['대상', audienceLabel(item.audience)], ...(Array.isArray(item.audience?.userIds) ? [['지정 UID', item.audience.userIds.join('\n')]] : []), ['상태', statusNames[item.status] ?? item.status], ['등록일 (KST)', date(item.created_at)], ['발송 시각 (KST)', date(item.scheduled_at)], ['완료일 (KST)', date(item.completed_at)], ['대상 기기', `${item.recipient_count ?? 0}대`], ['발송 성공 / 실패', `${metrics.sent} / ${item.failed_count ?? 0}건`], ['클릭', `${metrics.opened}건 (집계 지원 앱 · 기기별 1회)`], ['클릭률', metrics.summary], ['집계 범위', `클릭 집계 지원 앱에 발송 성공한 ${metrics.tracked}건 / 전체 성공 ${metrics.sent}건. 발송 성공은 FCM 접수 기준이며 실제 화면 노출을 보장하지 않습니다.`]]) {
       fields.append(el('dt', label), el('dd', value ?? '—'));
     }
     $('push-cancel-reservation').hidden = item.status !== 'scheduled';
@@ -132,7 +132,7 @@ export function createAnnouncements(client) {
     finally { busy = false; $('announcement-form').inert = false; }
   }
   function audience() {
-    const result = {}, id = $('push-user-id').value.trim(); if (id) result.userId = id;
+    const result = {}, ids = memberUids($('push-user-ids').value); if (ids.length) result.userIds = ids;
     for (const key of ['active', 'joined']) { const value = $(`push-${key}`).value; if (value) result[key === 'active' ? 'activeWithinDays' : 'joinedWithinDays'] = Number(value); }
     const subscription = $('push-subscription').value; if (subscription) result.subscription = subscription;
     return result;
@@ -151,7 +151,8 @@ export function createAnnouncements(client) {
     $('push-send').textContent = scheduled ? '예약 등록' : '발송 요청';
   }
   async function previewAudience() {
-    const ticket = ++previewTicket, filters = audience();
+    const ticket = ++previewTicket; let filters;
+    try { filters = audience(); } catch (error) { invalidatePreview(); dialogState('push', error.message); return; }
     $('push-preview').disabled = true; dialogState('push', '대상 수를 확인하는 중…');
     try {
       const response = await request({ action: 'preview', audience: filters });
@@ -165,7 +166,8 @@ export function createAnnouncements(client) {
   async function send(event) {
     event.preventDefault(); if (busy) return;
     if (!data.pushReady) { dialogState('push', '푸시 서버 연결 후 발송할 수 있습니다.'); return; }
-    const filters = audience();
+    let filters;
+    try { filters = audience(); } catch (error) { invalidatePreview(); dialogState('push', error.message); return; }
     if (!preview || preview.filters !== JSON.stringify(filters)) { dialogState('push', '먼저 대상 수를 확인해 주세요.'); return; }
     if (!preview.count) { dialogState('push', '발송 대상이 없습니다.'); return; }
     const title = $('push-title').value.trim(), message = $('push-body').value.trim();
@@ -173,7 +175,7 @@ export function createAnnouncements(client) {
     let scheduledAt;
     try { scheduledAt = scheduledTime($('push-timing').value, $('push-scheduled-at').value); }
     catch (error) { dialogState('push', error.message); return; }
-    const payload = { action: 'send', title, body: message, targetScreen: $('push-screen').value, audience: filters, iconKey: $('push-form').querySelector('[name="push-icon"]:checked').value, scheduledAt };
+    const payload = { action: 'send', title, body: message, targetScreen: $('push-screen').value, audience: filters, iconKey: 'default', scheduledAt };
     const signature = JSON.stringify(payload);
     if (signature !== requestSignature) { requestId = crypto.randomUUID(); requestSignature = signature; }
     if (!confirm(`${preview.count.toLocaleString('ko-KR')}대에 “${title}” 알림을 ${scheduledAt ? `${date(scheduledAt)}에 예약` : '발송'}할까요?`)) return;
@@ -209,6 +211,6 @@ export function createAnnouncements(client) {
   $('push-close').onclick = () => $('push-dialog').close();
   $('push-detail-close').onclick = () => $('push-detail-dialog').close();
   $('push-detail-done').onclick = () => $('push-detail-dialog').close();
-  for (const field of ['push-user-id', 'push-active', 'push-joined', 'push-subscription']) $(field).oninput = invalidatePreview;
+  for (const field of ['push-user-ids', 'push-active', 'push-joined', 'push-subscription']) $(field).oninput = invalidatePreview;
   return { load, clear: () => { generation++; invalidatePreview(); for (const id of ['announcement-dialog', 'push-dialog', 'push-detail-dialog']) if ($(id).open) $(id).close(); data = { announcements: [], campaigns: [], pushReady: false }; $('announcement-list').replaceChildren(); $('push-history').replaceChildren(); } };
 }
