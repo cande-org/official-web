@@ -1,6 +1,7 @@
+import { iconNames, scheduledTime, clickMetrics } from './push-controls.js';
 const $ = (id) => document.getElementById(id);
 const screens = { announcements: '공지사항', friends: '친구', rooms: '채팅 목록', my: '마이페이지', store: '상점' };
-const statusNames = { queued: '대기 중', sending: '발송 중', complete: '완료', failed: '실패' };
+const statusNames = { scheduled: '예약됨', queued: '대기 중', sending: '발송 중', complete: '완료', failed: '실패 포함', canceled: '예약 취소' };
 const el = (tag, text, className) => { const node = document.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; };
 const button = (text, handler, className) => { const node = el('button', text, className); node.type = 'button'; node.onclick = handler; return node; };
 const date = value => value ? new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '—';
@@ -13,13 +14,18 @@ export function createAnnouncements(client) {
   let data = { announcements: [], campaigns: [], pushReady: false };
   const views = { announcements: { page: 1, size: 20, query: '', filter: 'all' }, push: { page: 1, size: 20, query: '' } };
   let current = null, busy = false, preview = null, previewTicket = 0, generation = 0;
+  let currentPush = null, requestId = null, requestSignature = null;
   const state = (kind, message, error = false) => { const target = $(`${kind === 'announcements' ? 'announcement' : 'push'}-status`); target.textContent = message; target.classList.toggle('error', error); };
   const dialogState = (kind, message) => { $(`${kind}-dialog-status`).textContent = message; };
   async function request(payload) {
     const { data: session } = await client().auth.getSession();
     if (!session.session) throw Error('관리자 로그인이 필요합니다.');
     const { data: result, error } = await client().functions.invoke('admin-announcements', payload ? { method: 'POST', body: payload } : { method: 'GET' });
-    if (error) throw Error('공지사항·푸시 서버에 연결하지 못했습니다. 다시 시도해 주세요.');
+    if (error) {
+      let code; try { code = (await error.context.clone().json()).error; } catch { /* Network error. */ }
+      const messages = { invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_icon: '아이콘을 다시 선택해 주세요.' };
+      throw Error(messages[code] ?? '공지사항·푸시 요청을 완료하지 못했습니다. 다시 시도해 주세요.');
+    }
     return result;
   }
   function table(headers) {
@@ -57,27 +63,41 @@ export function createAnnouncements(client) {
     $('announcement-list').replaceChildren(wrapper); pager('announcements', list.length, pages);
   }
   function openPushDetail(item) {
+    currentPush = item;
+    const metrics = clickMetrics(item);
     const fields = $('push-detail-fields'); fields.replaceChildren();
-    for (const [label, value] of [['제목', item.title], ['본문', item.body], ['이동 화면', screens[item.target_screen] ?? '—'], ['대상', audienceLabel(item.audience)], ['상태', statusNames[item.status] ?? item.status], ['등록일 (KST)', date(item.created_at)], ['완료일 (KST)', date(item.completed_at)]]) {
+    for (const [label, value] of [['제목', item.title], ['본문', item.body], ['아이콘', iconNames[item.icon_key] ?? '앱 기본'], ['이동 화면', screens[item.target_screen] ?? '—'], ['대상', audienceLabel(item.audience)], ['상태', statusNames[item.status] ?? item.status], ['등록일 (KST)', date(item.created_at)], ['발송 시각 (KST)', date(item.scheduled_at)], ['완료일 (KST)', date(item.completed_at)], ['대상 기기', `${item.recipient_count ?? 0}대`], ['발송 성공 / 실패', `${metrics.sent} / ${item.failed_count ?? 0}건`], ['클릭', `${metrics.opened}건 (집계 지원 앱 · 기기별 1회)`], ['클릭률', metrics.summary], ['집계 범위', `클릭 집계 지원 앱에 발송 성공한 ${metrics.tracked}건 / 전체 성공 ${metrics.sent}건. 발송 성공은 FCM 접수 기준이며 실제 화면 노출을 보장하지 않습니다.`]]) {
       fields.append(el('dt', label), el('dd', value ?? '—'));
     }
+    $('push-cancel-reservation').hidden = item.status !== 'scheduled';
+    $('push-detail-status').textContent = '';
     $('push-detail-dialog').showModal(); $('push-detail-close').focus();
+  }
+  async function cancelReservation() {
+    if (!currentPush || busy || !confirm('이 알림의 예약을 취소할까요?')) return;
+    busy = true; $('push-cancel-reservation').disabled = true;
+    try { await request({ action: 'cancel', id: currentPush.id }); $('push-detail-dialog').close(); if (await load()) state('push', '예약을 취소했습니다.'); }
+    catch (error) { $('push-detail-status').textContent = error.message; }
+    finally { busy = false; $('push-cancel-reservation').disabled = false; }
   }
   function renderPush() {
     const view = views.push, query = view.query.trim().toLocaleLowerCase('ko-KR');
     const list = data.campaigns.filter(item => !query || `${item.title} ${item.body}`.toLocaleLowerCase('ko-KR').includes(query));
     const pages = Math.max(1, Math.ceil(list.length / view.size)); view.page = Math.min(view.page, pages);
     $('push-readiness').textContent = data.pushReady ? '푸시 서버가 연결되어 있습니다.' : '푸시 서버 연결 전입니다. 이력은 조회할 수 있으며 새 알림 발송은 연결 후 가능합니다.';
-    const { wrapper, body } = table(['제목', '본문', '대상', '등록일 (KST)', '완료일 (KST)', '상태', '관리']);
+    const { wrapper, body } = table(['제목', '본문', '대상', '아이콘', '발송 시각 (KST)', '성공 / 실패', '클릭률 · 클릭/대상', '상태', '관리']);
     wrapper.setAttribute('aria-label', '푸시 발송 이력');
     for (const item of list.slice((view.page - 1) * view.size, view.page * view.size)) {
       const row = el('tr'), name = el('td', null, 'name-cell'); name.append(button(item.title, () => openPushDetail(item), 'row-title')); row.append(name);
-      cell(row, item.body, 'push-body-cell'); cell(row, audienceLabel(item.audience), 'push-audience-cell'); cell(row, date(item.created_at), 'audit-date'); cell(row, date(item.completed_at), 'audit-date');
+      cell(row, item.body, 'push-body-cell'); cell(row, audienceLabel(item.audience), 'push-audience-cell');
+      cell(row, iconNames[item.icon_key] ?? '앱 기본'); cell(row, date(item.scheduled_at ?? item.created_at), 'audit-date');
+      cell(row, `${item.sent_count ?? 0} / ${item.failed_count ?? 0}`);
+      cell(row, clickMetrics(item).summary, 'push-metric-cell');
       cell(row, statusNames[item.status] ?? item.status, 'push-state-cell');
       const action = el('td', null, 'row-actions'); action.append(button('상세', () => openPushDetail(item))); row.append(action);
       row.onclick = event => { if (!event.target.closest('button,a,input,select')) openPushDetail(item); }; body.append(row);
     }
-    if (!list.length) { const row = el('tr'), empty = el('td', data.campaigns.length ? '검색 조건에 맞는 발송 이력이 없습니다.' : '아직 발송 이력이 없습니다.', 'empty-list'); empty.colSpan = 7; row.append(empty); body.append(row); }
+    if (!list.length) { const row = el('tr'), empty = el('td', data.campaigns.length ? '검색 조건에 맞는 발송 이력이 없습니다.' : '아직 발송 이력이 없습니다.', 'empty-list'); empty.colSpan = 9; row.append(empty); body.append(row); }
     $('push-history').replaceChildren(wrapper); pager('push', list.length, pages);
   }
   function render() { renderAnnouncements(); renderPush(); }
@@ -120,8 +140,15 @@ export function createAnnouncements(client) {
   function invalidatePreview() { preview = null; previewTicket++; $('push-recipient-count').textContent = '대상 수를 확인해 주세요.'; $('push-send').disabled = !data.pushReady; }
   function openPush() {
     $('push-form').reset(); invalidatePreview(); dialogState('push', '');
+    requestId = null; requestSignature = null; updateSchedule();
     if (!data.pushReady) dialogState('push', '푸시 서버 연결 후 발송할 수 있습니다.');
     $('push-dialog').showModal(); $('push-title').focus();
+  }
+  function updateSchedule() {
+    const scheduled = $('push-timing').value === 'scheduled';
+    $('push-scheduled-field').hidden = !scheduled;
+    $('push-scheduled-at').required = scheduled;
+    $('push-send').textContent = scheduled ? '예약 등록' : '발송 요청';
   }
   async function previewAudience() {
     const ticket = ++previewTicket, filters = audience();
@@ -143,12 +170,18 @@ export function createAnnouncements(client) {
     if (!preview.count) { dialogState('push', '발송 대상이 없습니다.'); return; }
     const title = $('push-title').value.trim(), message = $('push-body').value.trim();
     if (!title || !message) { dialogState('push', '제목과 본문을 입력해 주세요.'); return; }
-    if (!confirm(`${preview.count.toLocaleString('ko-KR')}대에 “${title}” 알림을 발송할까요?`)) return;
-    busy = true; $('push-form').inert = true; dialogState('push', '발송을 예약하는 중…');
+    let scheduledAt;
+    try { scheduledAt = scheduledTime($('push-timing').value, $('push-scheduled-at').value); }
+    catch (error) { dialogState('push', error.message); return; }
+    const payload = { action: 'send', title, body: message, targetScreen: $('push-screen').value, audience: filters, iconKey: $('push-form').querySelector('[name="push-icon"]:checked').value, scheduledAt };
+    const signature = JSON.stringify(payload);
+    if (signature !== requestSignature) { requestId = crypto.randomUUID(); requestSignature = signature; }
+    if (!confirm(`${preview.count.toLocaleString('ko-KR')}대에 “${title}” 알림을 ${scheduledAt ? `${date(scheduledAt)}에 예약` : '발송'}할까요?`)) return;
+    busy = true; $('push-form').inert = true; dialogState('push', scheduledAt ? '예약을 등록하는 중…' : '발송을 요청하는 중…');
     try {
-      const result = await request({ action: 'send', title, body: message, targetScreen: $('push-screen').value, audience: filters });
+      const result = await request({ ...payload, requestId });
       $('push-dialog').close(); invalidatePreview();
-      const refreshed = await load(); if (refreshed) state('push', `${result.recipients}대에 발송을 예약했습니다.`);
+      const refreshed = await load(); if (refreshed) state('push', scheduledAt ? `${result.recipients}대에 ${date(result.scheduledAt)} 발송을 예약했습니다.` : `${result.recipients}대에 발송을 요청했습니다.`);
     } catch (error) { dialogState('push', error.message); }
     finally { busy = false; $('push-form').inert = false; }
   }
@@ -169,6 +202,8 @@ export function createAnnouncements(client) {
   $('push-prev').onclick = () => { views.push.page--; renderPush(); };
   $('push-next').onclick = () => { views.push.page++; renderPush(); };
   $('push-preview').onclick = previewAudience;
+  $('push-timing').onchange = updateSchedule;
+  $('push-cancel-reservation').onclick = cancelReservation;
   $('push-form').onsubmit = send;
   $('push-cancel').onclick = () => $('push-dialog').close();
   $('push-close').onclick = () => $('push-dialog').close();

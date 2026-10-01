@@ -340,9 +340,9 @@ h1{font-size:25px}
 .admin-record-table tbody tr:hover{background:#fafbfd}
 .admin-record-table .name-cell{min-width:170px}
 .admin-record-table .row-summary{max-width:340px}
-#push .admin-record-table{min-width:1160px}
-#push .admin-record-table th:nth-child(2){width:25%}
-#push .admin-record-table th:nth-child(3){width:21%}
+#push .admin-record-table{min-width:1420px}
+#push .admin-record-table th:nth-child(2){width:22%}
+#push .admin-record-table th:nth-child(3){width:18%}
 .push-body-cell,.push-audience-cell{white-space:pre-wrap;overflow-wrap:anywhere}
 .push-state-cell{white-space:nowrap}
 #push-readiness{font-size:12px}
@@ -368,3 +368,18 @@ h1{font-size:25px}
 #push-detail-fields dd{margin:0;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:900px){.push-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.push-filters{grid-template-columns:1fr}.push-actions .primary{margin-left:0}#push-detail-fields{grid-template-columns:1fr;gap:4px}#push-detail-fields dd{margin-bottom:10px}}
+
+.push-icons{border:0;margin:0;padding:0;min-width:0}
+.push-icons legend{font-size:12px;font-weight:600;color:#464c56;margin-bottom:10px}
+.push-icon-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.push-form .push-icon-options label{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border:1px solid #d9dde3;border-radius:6px;cursor:pointer}
+.push-icon-options label:has(input:checked){border-color:#315ee8;background:#f0f4ff;box-shadow:inset 0 0 0 1px #315ee8}
+.push-form .push-icon-options input{width:16px;height:16px;padding:0;position:absolute;top:8px;left:8px;accent-color:#315ee8}
+.push-icon-options svg,.push-icon-preview{width:24px;height:24px;fill:#464c56;margin-top:8px}
+.push-icon-preview{display:grid;place-items:center;background:#464c56;color:white;border-radius:5px;font-size:10px}
+.push-schedule{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.push-form label[hidden]{display:none}
+.push-metric-cell{white-space:nowrap;font-variant-numeric:tabular-nums}
+#push-detail-status{color:#b32936;font-size:12px}
+#push-detail-status:empty{display:none}
+@media(max-width:520px){.push-schedule{grid-template-columns:1fr}.push-icon-options{gap:6px}}
