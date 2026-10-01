@@ -201,7 +201,7 @@ h1{font-size:25px}
 .metric-card strong{font-size:23px}
 .metric-card span,.metric-card small{font-size:11px}
 .section-toolbar{gap:16px}
-.metric-filters{width:100%;display:grid;grid-template-columns:1fr 1fr 80px auto;gap:6px}
+.metric-filters{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .metric-filters input{max-width:none;width:100%;font-size:11px}
 .metric-filters select{width:100%;font-size:11px}
 .metric-filters button{padding:7px 10px}
