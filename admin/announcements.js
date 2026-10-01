@@ -1,4 +1,4 @@
-import { preparePhoto } from './push-photo.js';
+import { createPhotoEditor } from './push-photo.js';
 import { scheduledTime, clickMetrics, memberUids } from './push-controls.js';
 const $ = (id) => document.getElementById(id);
 const screens = { announcements: '공지사항', friends: '친구', rooms: '채팅 목록', my: '마이페이지', store: '상점' };
@@ -17,6 +17,7 @@ export function createAnnouncements(client) {
   let current = null, busy = false, preview = null, previewTicket = 0, generation = 0;
   let currentPush = null, requestId = null, requestSignature = null;
   let photo = null, photoTicket = 0, photoPreparing = false;
+  const photoEditor = createPhotoEditor();
   const state = (kind, message, error = false) => { const target = $(`${kind === 'announcements' ? 'announcement' : 'push'}-status`); target.textContent = message; target.classList.toggle('error', error); };
   const dialogState = (kind, message) => { $(`${kind}-dialog-status`).textContent = message; };
   async function request(payload, endpoint = 'admin-announcements') {
@@ -213,23 +214,28 @@ export function createAnnouncements(client) {
   $('announcement-prev').onclick = () => { views.announcements.page--; renderAnnouncements(); };
   $('announcement-next').onclick = () => { views.announcements.page++; renderAnnouncements(); };
   function resetPhoto() {
-    photoTicket++; photoPreparing = false;
+    photoTicket++; photoPreparing = false; photoEditor.clear();
     const old = photo; photo = null;
     $('push-photo').value = ''; $('push-photo-preview').hidden = true;
     $('push-photo-image').removeAttribute('src');
     if (old?.uploaded) void request({ action: 'discard', id: old.id }, 'admin-push-image').catch(() => {});
   }
-  $('push-photo').onchange = async event => {
-    const file = event.target.files?.[0]; resetPhoto();
-    if (!file) return;
-    const ticket = photoTicket; photoPreparing = true; $('push-send').disabled = true; dialogState('push', '사진을 준비하는 중…');
+  async function editPhoto(file) {
+    const ticket = ++photoTicket; photoPreparing = true; $('push-send').disabled = true; dialogState('push', '사진을 준비하는 중…');
     try {
-      const prepared = await preparePhoto(file);
+      const prepared = await photoEditor.edit(file);
       if (ticket !== photoTicket) return;
-      photo = prepared; $('push-photo-image').src = prepared.url; $('push-photo-preview').hidden = false; dialogState('push', '');
+      if (prepared) {
+        const old = photo; photo = prepared;
+        $('push-photo-image').src = prepared.url; $('push-photo-preview').hidden = false;
+        if (old?.uploaded) void request({ action: 'discard', id: old.id }, 'admin-push-image').catch(() => {});
+      }
+      dialogState('push', '');
     } catch (error) { if (ticket === photoTicket) dialogState('push', error.message); }
-    finally { if (ticket === photoTicket) { photoPreparing = false; $('push-send').disabled = !data.pushReady; } }
-  };
+    finally { if (ticket === photoTicket) { photoPreparing = false; $('push-photo').value = ''; $('push-send').disabled = !data.pushReady; } }
+  }
+  $('push-photo').onchange = event => { const file = event.target.files?.[0]; if (file) void editPhoto(file); };
+  $('push-photo-edit').onclick = () => { if (photo) void editPhoto(); };
   $('push-photo-remove').onclick = () => { resetPhoto(); $('push-send').disabled = !data.pushReady; dialogState('push', ''); };
   $('push-dialog').addEventListener('cancel', event => { if (busy) event.preventDefault(); });
   $('push-dialog').addEventListener('close', resetPhoto);
