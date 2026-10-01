@@ -60,6 +60,7 @@ try {
  const calls=await page.evaluate(()=>window.calls);const sends=calls.filter(c=>c.action==='send');assert.equal(sends.length,2);assert.equal(sends[0].requestId,sends[1].requestId);assert.equal(sends[0].iconKey,undefined);assert(sends[0].imageId);assert.equal(sends[0].imageId,sends[1].imageId);assert.equal(calls.filter(c=>c.action==='upload').length,1);assert.equal(calls.find(c=>c.action==='upload').id,sends[0].imageId);assert.deepEqual(sends[0].audience.userIds,ids);assert.deepEqual(calls.find(c=>c.action==='preview').audience.userIds,ids);assert.equal(sends[0].scheduledAt,new Date(time+'+09:00').toISOString());
  await page.locator('#push-add').click();assert.equal(await page.locator('#push-user-ids').inputValue(),'');assert(!(await page.locator('#push-photo-preview').isVisible()));
  await page.setViewportSize({width:390,height:844});await page.locator('#push-timing').selectOption('scheduled');
+ await page.locator('#push-photo').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:png});await page.locator('#push-photo-preview').waitFor({state:'visible'});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  assert(await page.locator('#push-dialog').evaluate(d=>d.scrollWidth<=d.clientWidth));
  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/push-schedule-mobile.png'});
