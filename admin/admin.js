@@ -2,12 +2,14 @@ import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
 import { createContentLists } from './content-list.js';
 import { createPromptStudio } from './prompt-studio.js';
 import { createAnnouncements } from './announcements.js';
+import { createMembers } from './members.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
 let contentLists;
 let promptStudio;
 let announcements;
+let members;
 let client, snapshot, dirty = false, busy = false, activeTab = 'dashboard', authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
@@ -24,7 +26,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); }
+  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -51,6 +53,7 @@ const pageMeta = {
   prompts: ['프롬프트 실험실', '세 친구의 성향을 다듬고 실제 응답을 비교하세요.'],
   announcements: ['공지사항', '앱에 표시할 공지를 관리하세요.'],
   push: ['푸시 알림', '발송 이력을 확인하고 새 알림을 보내세요.'],
+  members: ['회원', '회원 정보를 확인하고 푸시 발송 대상을 찾으세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
@@ -63,22 +66,23 @@ function render() {
   $('payment-notice').value = snapshot.draft.paymentNotice;
   selectTab(activeTab);
 }
-function selectTab(tab) {
+function selectTab(tab, options = {}) {
   const changed = activeTab !== tab;
   activeTab = tab;
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push'].includes(tab);
-  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push'].includes(tab);
+  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members'].includes(tab);
+  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push'].includes(tab);
+  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
+  if (tab === 'members') void members.load();
   if (tab === 'admins') void loadAdmins();
   if (tab === 'prompts') void promptStudio.load();
-  if (tab === 'announcements' || tab === 'push') void announcements.load();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push']) $(name).hidden = name !== tab;
+  if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
+  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -295,6 +299,7 @@ try {
   if (!config.url || !config.key) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
   client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   announcements = createAnnouncements(() => client);
+  members = createMembers(() => client, ids => { selectTab('push', { skipLoad: true }); void announcements.openForMembers(ids); });
   const { data: { session }, error } = await client.auth.getSession();
   history.replaceState({}, '', '/admin');
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
