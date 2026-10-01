@@ -196,6 +196,7 @@ export function createAnnouncements(client) {
       }
       if (ticket !== generation) return;
       const result = await request({ ...payload, requestId });
+      if (ticket !== generation) return;
       $('push-dialog').close(); invalidatePreview();
       const refreshed = await load(); if (refreshed) state('push', scheduledAt ? `${result.recipients}대에 ${date(result.scheduledAt)} 발송을 예약했습니다.` : `${result.recipients}대에 발송을 요청했습니다.`);
     } catch (error) { dialogState('push', error.message); }
