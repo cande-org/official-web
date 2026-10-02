@@ -411,3 +411,7 @@ h1{font-size:25px}
 #push-photo-image{width:160px;height:160px;object-fit:contain}
 .push-photo-thumb{height:64px}
 @media(max-width:520px){#push-photo-dialog{padding:16px}#push-photo-dialog .item-dialog-actions{flex-wrap:wrap;gap:8px}#push-photo-dialog .item-dialog-actions button{padding:8px 10px}}
+
+#legal-dialog {width:min(850px,calc(100vw - 32px));max-height:90vh;overflow:auto;border:1px solid var(--border,#ddd);border-radius:16px;padding:24px}#legal-dialog::backdrop{background:#0008}#legal-form{display:grid;gap:16px}#legal-form label{display:grid;gap:8px}#legal-body{font-size:14px;line-height:1.6;font-family:inherit;resize:vertical;min-height:320px}.legal-versions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}#legal-list .item{display:flex;align-items:center;justify-content:space-between;gap:16px}#legal-list h3{margin:0 0 6px}#legal-list p{margin:4px 0}.legal-versions button{font-size:12px}@media(max-width:760px){#legal-dialog{padding:16px}#legal-list .item{align-items:flex-start}}
+
+#legal-form .actions{position:static;inset:auto;padding:16px 0 0;margin-top:8px;width:auto;border-top:1px solid var(--line);z-index:auto}#legal-body{font-size:14px;line-height:1.6}

@@ -1,0 +1,32 @@
+// Real admin module, isolated API fixture; no production editing or messages.
+import fs from 'node:fs';import assert from 'node:assert/strict';import {build} from 'esbuild';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
+const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(build){build.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const createClient=()=>window.fakeClient;',loader:'js'}));}}]});
+const seed=JSON.parse(fs.readFileSync('../mental/server/supabase/content/initial.json','utf8'));
+const legal=JSON.parse(fs.readFileSync('../mental/server/supabase/seed/legal-documents-v1.json','utf8'));
+const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const html=fs.readFileSync('admin/index.html','utf8').replace(/<script[\s\S]*?<\/script>/g,'').replace(/<link[^>]+>/g,'');
+ await page.route('http://127.0.0.1:54321/**',r=>r.request().url().endsWith('/assets/app-icon.png')?r.fulfill({contentType:'image/png',body:fs.readFileSync('assets/app-icon.png')}):r.fulfill({contentType:'text/html',body:html}));await page.goto('http://127.0.0.1:54321/');await page.addStyleTag({content:fs.readFileSync('admin/admin.css','utf8')});
+ await page.evaluate(({seed,legal})=>{
+ window.fetch=async()=>new Response(JSON.stringify({url:'https://fixture.invalid',key:'fixture'}));window.session={};window.calls=[];window.signoutListener=()=>{};
+ window.legal={documents:legal.documents.map(d=>({key:d.key,label:d.label,required:d.required,needsChoice:d.needsChoice,revision:1,currentVersionId:d.id,versions:[{...d,publishedAt:'2026-10-03T00:00:00Z',createdAt:'2026-10-03T00:00:00Z'}]}))};
+ window.fakeClient={auth:{getSession:async()=>({data:{session:window.session}}),onAuthStateChange:f=>window.signoutListener=f,signOut:async()=>{window.session=null;window.signoutListener('SIGNED_OUT');}},functions:{invoke:async(name,options)=>{
+ if(name==='admin-content')return {data:{draft:seed,revision:1,published_revision:1,contracts:[],metadata:[]}};
+ if(name.startsWith('admin-metrics?'))return {error:new Error('unused metrics fixture')};
+ if(name==='admin-legal'){
+ if(options?.body){window.calls.push(options.body);if(window.conflict){window.conflict=false;return{error:{context:{status:409}}};}const body=options.body,doc=window.legal.documents.find(d=>d.key===body.key);const version={...body,id:body.id??crypto.randomUUID(),createdAt:'2026-10-03T01:00:00Z',publishedAt:body.action==='publish'?'2026-10-03T01:00:00Z':null};doc.versions=doc.versions.filter(v=>v.id!==version.id);doc.versions.unshift(version);doc.revision++;if(version.publishedAt)doc.currentVersionId=version.id;}
+ return {data:structuredClone(window.legal)};
+ }return{error:new Error('unused fixture')};}}};
+ },{seed,legal});
+ await page.addScriptTag({type:'module',content:source.outputFiles[0].text});await page.locator('[data-tab="legal"]').click();await page.locator('#legal-list .item').last().waitFor();assert.equal(await page.locator('#legal-list .item').count(),6);
+ const out=process.env.QA_SCREENSHOT_DIR;if(out){fs.mkdirSync(out,{recursive:true});await page.screenshot({path:out+'/admin-legal-list.png'});}
+ await page.locator('#legal-list button').nth(4).click();assert(await page.locator('#legal-body').evaluate(e=>e.readOnly));assert((await page.locator('#legal-body').inputValue()).includes('김형준'));assert(await page.locator('#legal-publish').isDisabled());
+ if(out)await page.screenshot({path:out+'/admin-legal-version.png'});
+ await page.locator('#legal-new').click();await page.locator('#legal-version').fill('1.1');await page.locator('#legal-body').fill('Synthetic new version');await page.locator('#legal-save').click();await page.locator('#legal-dialog-status').getByText('초안을 저장했습니다.',{exact:false}).waitFor();assert.equal((await page.evaluate(()=>window.calls))[0].effectiveOn,'2026-10-05');assert.equal(await page.locator('#legal-body').inputValue(),'Synthetic new version');
+ await page.evaluate(()=>window.conflict=true);await page.locator('#legal-save').click();await page.locator('#legal-dialog-status').getByText('문서 버전이 충돌합니다.',{exact:false}).waitFor();
+ page.on('dialog',dialog=>dialog.accept());await page.locator('#legal-publish').click();await page.locator('#legal-dialog').waitFor({state:'hidden'});assert((await page.locator('#legal-list').innerText()).includes('공개 v1.1'));
+ for(const w of [430,390,360]){await page.setViewportSize({width:w,height:844});await page.locator('#legal-list button').nth(1).click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert(await page.locator('#legal-dialog').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}));if(w===390&&out)await page.screenshot({path:out+'/admin-legal-mobile.png'});await page.locator('#legal-close').click();}
+ await page.setViewportSize({width:1440,height:1000});await page.locator('#logout').click();assert(await page.locator('#editor').isHidden());assert.equal(await page.locator('#legal-list .item').count(),0);assert.deepEqual(errors,[]);console.log('PASS legal admin: 6 policies, immutable publication, drafts, optimistic conflict, publish, mobile widths, logout');
+}finally{await browser.close();}

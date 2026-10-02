@@ -3,6 +3,7 @@ import { createContentLists } from './content-list.js';
 import { createPromptStudio } from './prompt-studio.js';
 import { createAnnouncements } from './announcements.js';
 import { createMembers } from './members.js';
+import { createLegalDocuments } from './legal.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
@@ -10,6 +11,7 @@ let contentLists;
 let promptStudio;
 let announcements;
 let members;
+let legal;
 let client, snapshot, dirty = false, busy = false, activeTab = 'dashboard', authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
@@ -26,7 +28,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); }
+  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -53,6 +55,7 @@ const pageMeta = {
   prompts: ['프롬프트 실험실', '세 친구의 성향을 다듬고 실제 응답을 비교하세요.'],
   announcements: ['공지사항', '앱에 표시할 공지를 관리하세요.'],
   push: ['푸시 알림', '발송 이력을 확인하고 새 알림을 보내세요.'],
+  legal: ['약관·정책', '문서 내용, 공개 버전과 시행일을 관리하세요.'],
   members: ['회원', '회원 정보를 확인하고 푸시 발송 대상을 찾으세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
@@ -72,17 +75,18 @@ function selectTab(tab, options = {}) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members'].includes(tab);
-  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members'].includes(tab);
+  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal'].includes(tab);
+  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members'].includes(tab);
+  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
+  if (tab === 'legal') void legal.load();
   if (tab === 'members') void members.load();
   if (tab === 'admins') void loadAdmins();
   if (tab === 'prompts') void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members']) $(name).hidden = name !== tab;
+  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -127,6 +131,7 @@ async function saveItemContent(content) {
 }
 contentLists = createContentLists({ getSnapshot: () => snapshot, onSave: saveItemContent, onStage: content => { snapshot.draft = content; markDirty(); }, onError: message => status(message,true) });
 promptStudio = createPromptStudio(() => client);
+legal = createLegalDocuments(() => client);
 $('form').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
 $('publish').onclick = () => save(true);
 $('reload').onclick = () => { if (!dirty || confirm('저장하지 않은 변경사항을 버리고 다시 불러올까요?')) load(); };
@@ -140,7 +145,7 @@ $('preview').onclick = () => {
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
-window.addEventListener('beforeunload', (e) => { if (dirty || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (dirty || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved()) { e.preventDefault(); e.returnValue = ''; } });
 $('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;

@@ -7,8 +7,8 @@ const el = (tag, text, className) => { const node = document.createElement(tag);
 const button = (text, handler, className) => { const node = el('button', text, className); node.type = 'button'; node.onclick = handler; return node; };
 const date = value => value ? new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '—';
 const audienceLabel = audience => {
-  if (!audience || !Object.keys(audience).length) return '전체 허용 기기';
-  return [audience.userId && `회원 UID ${audience.userId}`, Array.isArray(audience.userIds) && `지정 회원 ${audience.userIds.length}명`, audience.activeWithinDays && `최근 ${audience.activeWithinDays}일 활동`, audience.joinedWithinDays && `가입 ${audience.joinedWithinDays}일 이내`, audience.subscription && (audience.subscription === 'active' ? '구독 중' : '구독 없음')].filter(Boolean).join(' · ');
+  if (!audience || !Object.keys(audience).length) return '마케팅 동의 기기';
+  return [audience.messageType==='service'?'서비스 안내':'마케팅 동의 · 08–21시',audience.userId && `회원 UID ${audience.userId}`, Array.isArray(audience.userIds) && `지정 회원 ${audience.userIds.length}명`, audience.activeWithinDays && `최근 ${audience.activeWithinDays}일 활동`, audience.joinedWithinDays && `가입 ${audience.joinedWithinDays}일 이내`, audience.subscription && (audience.subscription === 'active' ? '구독 중' : '구독 없음')].filter(Boolean).join(' · ');
 };
 
 export function createAnnouncements(client) {
@@ -140,7 +140,7 @@ export function createAnnouncements(client) {
     finally { busy = false; $('announcement-form').inert = false; }
   }
   function audience() {
-    const result = {}, ids = memberUids($('push-user-ids').value); if (ids.length) result.userIds = ids;
+    const result = {messageType:$('push-message-type').value}, ids = memberUids($('push-user-ids').value); if (ids.length) result.userIds = ids;
     for (const key of ['active', 'joined']) { const value = $(`push-${key}`).value; if (value) result[key === 'active' ? 'activeWithinDays' : 'joinedWithinDays'] = Number(value); }
     const subscription = $('push-subscription').value; if (subscription) result.subscription = subscription;
     return result;
@@ -253,6 +253,6 @@ export function createAnnouncements(client) {
   $('push-close').onclick = () => { if (!busy) $('push-dialog').close(); };
   $('push-detail-close').onclick = () => $('push-detail-dialog').close();
   $('push-detail-done').onclick = () => $('push-detail-dialog').close();
-  for (const field of ['push-user-ids', 'push-active', 'push-joined', 'push-subscription']) $(field).oninput = invalidatePreview;
+  for (const field of ['push-user-ids', 'push-active', 'push-joined', 'push-subscription', 'push-message-type']) $(field).oninput = invalidatePreview;
   return { load, openForMembers: async ids => { if (!await load()) return; openPush(); $('push-user-ids').value = ids.join('\n'); invalidatePreview(); }, clear: () => { generation++; resetPhoto(); invalidatePreview(); for (const id of ['announcement-dialog', 'push-dialog', 'push-detail-dialog']) if ($(id).open) $(id).close(); data = { announcements: [], campaigns: [], pushReady: false }; $('announcement-list').replaceChildren(); $('push-history').replaceChildren(); } };
 }
