@@ -3,6 +3,7 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.te
 const date=v=>new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
 const states={open:'접수',answered:'답변됨',closed:'종료'};
 const alerts={pending:'발송 대기',sending:'발송 중',sent:'발송됨',failed:'발송 실패',historical:'알림 연결 전 접수'};
+const attachmentUrl=value=>{try{const url=new URL(value);return url.protocol==='https:'&&url.hostname.endsWith('.supabase.co')&&url.pathname.startsWith('/storage/v1/object/sign/mental-media/')?url.href:null;}catch{return null;}};
 export function supportTarget(){
  const key='mental:support:target',valid=id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id??'');
  const id=new URLSearchParams(location.search).get('support');
@@ -25,8 +26,16 @@ export function createSupport(getClient){
   for(const label of ['유형','제목·내용','보낸 사람','접수 시각 (KST)','상태','Slack 알림','관리']){const th=el('th',label);th.scope='col';headers.append(th);}head.append(headers);
   for(const item of data.requests){
    const row=el('tr');row.append(el('td',item.category));
-   const content=el('td',null,'name-cell'),open=el('button',item.subject||item.preview||'문의 내용','row-title');open.type='button';open.onclick=()=>void detail(item.id);
-   content.append(open);if(item.subject)content.append(el('p',item.preview,'row-summary'));if(item.has_attachment)content.append(el('span','사진 첨부','content-state'));row.append(content);
+   const content=el('td',null,'name-cell'),preview=el('div',null,'support-preview'),copy=el('div',null,'support-preview-copy'),open=el('button',item.subject||item.preview||'문의 내용','row-title');open.type='button';open.onclick=()=>void detail(item.id);
+   copy.append(open);if(item.subject)copy.append(el('p',item.preview,'row-summary'));preview.append(copy);
+   if(item.has_attachment){
+    const thumbnail=el('button',null,'support-thumbnail');thumbnail.type='button';thumbnail.setAttribute('aria-label','첨부 사진 상세 보기');thumbnail.onclick=()=>void detail(item.id);
+    const url=attachmentUrl(item.attachmentUrl);
+    if(url){const image=el('img');image.src=url;image.alt='첨부 사진';image.loading='lazy';image.referrerPolicy='no-referrer';image.onerror=()=>thumbnail.replaceChildren(el('span','사진 보기'));thumbnail.append(image);}
+    else thumbnail.append(el('span','사진 보기'));
+    preview.append(thumbnail);
+   }
+   content.append(preview);row.append(content);
    const sender=el('td',null,'support-sender');sender.append(el('p',item.nickname||(item.is_guest?'게스트':'프로필 미설정')),el('p',item.reply_email||'회신 이메일 없음','row-summary'));row.append(sender);
    for(const value of [date(item.created_at),states[item.status]||item.status,alerts[item.notification_state]||'확인 필요'])row.append(el('td',value));
    const actions=el('td',null,'row-actions'),button=el('button','상세');button.type='button';button.onclick=()=>void detail(item.id);actions.append(button);row.append(actions);
@@ -53,11 +62,11 @@ export function createSupport(getClient){
    for(const [label,value] of [['접수 번호',item.id],['유형',item.category],['제목',item.subject||'없음'],['보낸 사람',item.nickname||(item.is_guest?'게스트':'프로필 미설정')],['회신 이메일',item.reply_email||'없음'],['접수 시각 (KST)',date(item.created_at)],['상태',states[item.status]||item.status],['Slack 알림',alerts[item.notification_state]||'확인 필요']])fields.append(el('dt',label),el('dd',value));
    $('support-detail-body').textContent=item.content||'';
    if(item.has_attachment){
-    let url;try{url=new URL(item.attachmentUrl);}catch{}
-    if(url?.protocol==='https:'&&url.hostname.endsWith('.supabase.co')&&url.pathname.startsWith('/storage/v1/object/sign/mental-media/')){
-     const image=el('img');image.src=url.href;image.alt='제출한 아이디어 첨부 사진';image.referrerPolicy='no-referrer';
+    const url=attachmentUrl(item.attachmentUrl);
+    if(url){
+     const image=el('img');image.src=url;image.alt='제출한 아이디어 첨부 사진';image.referrerPolicy='no-referrer';
      image.onerror=()=>{if(current!==detailTicket||session!==generation)return;$('support-detail-attachment').replaceChildren(el('p','첨부 사진을 불러오지 못했습니다. 상세 화면을 다시 열어 주세요.','helper'));};
-     const link=el('a','사진 크게 보기');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';$('support-detail-attachment').append(image,link);
+     const link=el('a','사진 크게 보기');link.href=url;link.target='_blank';link.rel='noopener noreferrer';$('support-detail-attachment').append(image,link);
     }else $('support-detail-attachment').append(el('p','첨부 사진을 불러오지 못했습니다. 상세 화면을 다시 열어 주세요.','helper'));
    }
    $('support-detail-status').textContent='';
