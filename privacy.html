@@ -121,6 +121,16 @@
                   <td>계약 이행 및 거래기록 보존 의무</td>
                 </tr>
                 <tr>
+                  <td>보상형 광고 제공·보상 검증</td>
+                  <td>IP 주소와 대략적인 위치, 광고·기기 식별자, 광고 노출·시청·상호작용, 오류·성능 정보. 보상 검증에는 서비스 회원 식별자와 일회성 검증값을 사용합니다.</td>
+                  <td>이용자가 선택한 광고 기능 제공. 광고 동의 및 추적 허용은 제공되는 개인정보 선택 화면과 기기 설정에 따릅니다.</td>
+                </tr>
+                <tr>
+                  <td>알림 전달</td>
+                  <td>푸시 토큰, 알림 제목·내용과 전달 상태</td>
+                  <td>서비스 알림 제공. 마케팅 알림은 별도 수신 동의를 따릅니다.</td>
+                </tr>
+                <tr>
                   <td>문의·권리행사 처리</td>
                   <td>
                     발신 이메일, 문의 내용, 답변 기록 및 본인 확인에 필요한 최소
@@ -145,9 +155,7 @@
           <p>
             소셜 로그인 정보는 제공자와 이용자가 선택한 공개 범위에 따라
             달라집니다. 회사가 소셜 계정 비밀번호나 결제 카드번호를 직접
-            수집·보관하지는 않습니다. 카메라·사진 접근은 이용자가 해당 기능을
-            사용할 때 기기 권한을 요청하며, 거부해도 사진 기능 외의 기본 기능은
-            이용할 수 있습니다.
+            수집·보관하지는 않습니다. 프로필 사진은 이용자가 선택한 사진을 시스템 사진 선택기로 가져옵니다. 현재 카메라·마이크·연락처·위치 권한을 요청하지 않습니다.
           </p>
           <p>
             연락처 목록, 정밀 위치, 학교 계정, 학번 등을 필수로 요구하지
@@ -260,6 +268,14 @@
                   </td>
                 </tr>
                 <tr>
+                  <td>Google AdMob</td>
+                  <td>선택한 보상형 광고 제공·측정·부정 이용 방지 및 서버 보상 검증. 광고·기기 식별자, IP 주소, 광고 상호작용·오류·성능 정보, 보상 검증용 회원 식별자와 일회성 검증값. 대화 본문과 프로필 사진은 광고 입력으로 보내지 않습니다.</td>
+                </tr>
+                <tr>
+                  <td>Google Firebase Cloud Messaging / Apple APNs</td>
+                  <td>푸시 토큰과 알림 제목·내용을 이용한 알림 전달</td>
+                </tr>
+                <tr>
                   <td>Google (Gmail)</td>
                   <td>문의 이메일의 수신·보관. 발신 주소와 문의·답변 내용</td>
                 </tr>
@@ -272,6 +288,10 @@
             사업자의 방침도 적용됩니다. 이는 회사가 대화 내용을 광고 사업자에게
             제공한다는 뜻이 아닙니다. 회사는 법령상 근거 또는 별도 동의 없이
             개인정보를 독립적인 제3자의 목적을 위해 제공하지 않습니다.
+          </p>
+          <p>
+            보상형 광고는 이용자가 선택하여 시청합니다. Google Mobile Ads SDK는 광고 제공·측정·부정 이용 방지를 위해 위 정보를 처리할 수 있으며 Google의 개인정보처리방침도 적용됩니다. 앱의 광고 개인정보 선택 화면과 기기 설정에서 선택을 변경할 수 있습니다. iOS 추적 허용을 거부하면 비개인화 광고를 요청하며, 거부만으로 기본 채팅 기능을 제한하지 않습니다.
+            <a href="https://policies.google.com/privacy">Google 개인정보처리방침</a>
           </p>
         </section>
         <section id="privacy-ko-5" class="legal-section">
@@ -541,6 +561,16 @@
                   </td>
                 </tr>
                 <tr>
+                  <td>Rewarded ads and reward verification</td>
+                  <td>IP address and approximate location, advertising/device identifiers, ad impressions, views/interactions, diagnostic and performance data; service user identifier and a one-time reward verification value</td>
+                  <td>Optional advertising selected by the user, subject to advertising privacy choices and device tracking permission</td>
+                </tr>
+                <tr>
+                  <td>Notification delivery</td>
+                  <td>Push tokens, notification title/content and delivery status</td>
+                  <td>Service alerts; marketing alerts require separate consent</td>
+                </tr>
+                <tr>
                   <td>Questions and privacy requests</td>
                   <td>
                     Sender email, request and reply, minimum identity
@@ -565,9 +595,7 @@
           <p>
             Information received from a social login provider depends on the
             provider and your sharing choices. We do not directly collect your
-            social-account password or payment card number. Camera/photo
-            permissions are requested when you use those features. Declining
-            does not block other basic features.
+            social-account password or payment card number. Profile photos are imported through the system photo picker when you select a photo. The current app does not request camera, microphone, contact or location permissions.
           </p>
           <p>
             Contact lists, precise location and school identifiers are not
@@ -688,6 +716,14 @@
                   </td>
                 </tr>
                 <tr>
+                  <td>Google AdMob</td>
+                  <td>Optional rewarded advertising, measurement, fraud prevention and server-side reward verification. Advertising/device identifiers, IP address, ad interactions, diagnostics and performance data; a service user identifier and one-time value for reward verification. Chat text and profile photos are not supplied as advertising input.</td>
+                </tr>
+                <tr>
+                  <td>Google Firebase Cloud Messaging / Apple APNs</td>
+                  <td>Notification delivery using push tokens and notification titles/content</td>
+                </tr>
+                <tr>
                   <td>Google (Gmail)</td>
                   <td>
                     Receiving and storing inquiry emails, sender address and
@@ -703,6 +739,10 @@
             This does not mean we disclose chat content for advertising. We do
             not provide personal data for an independent third party’s purposes
             without consent or another legal basis.
+          </p>
+          <p>
+            Rewarded ads are optional. The Google Mobile Ads SDK may process the data above for advertising, measurement and fraud prevention under Google's privacy policy. Choices can be changed through the app's advertising privacy options and device settings. On iOS, the app requests non-personalized ads when tracking permission is denied; this does not restrict basic chat access.
+            <a href="https://policies.google.com/privacy">Google Privacy Policy</a>
           </p>
         </section>
         <section id="privacy-en-5" class="legal-section">
