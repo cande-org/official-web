@@ -2,6 +2,7 @@ import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
 import { createContentLists } from './content-list.js';
 import { createPromptStudio } from './prompt-studio.js';
 import { createAnnouncements } from './announcements.js';
+import { createSupport, supportTarget } from './support.js';
 import { createMembers } from './members.js';
 import { createLegalDocuments } from './legal.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
@@ -12,7 +13,8 @@ let promptStudio;
 let announcements;
 let members;
 let legal;
-let client, snapshot, dirty = false, busy = false, activeTab = 'dashboard', authGeneration = 0;
+let support;
+let client, snapshot, dirty = false, busy = false, activeTab = (new URLSearchParams(location.search).get('tab') === 'support' || supportTarget()) ? 'support' : 'dashboard', authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
 const mobileMenu = matchMedia('(max-width: 760px)');
@@ -28,7 +30,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); }
+  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -56,6 +58,7 @@ const pageMeta = {
   announcements: ['공지사항', '앱에 표시할 공지를 관리하세요.'],
   push: ['푸시 알림', '발송 이력을 확인하고 새 알림을 보내세요.'],
   legal: ['약관·정책', '문서 내용, 공개 버전과 시행일을 관리하세요.'],
+  support: ['문의·아이디어', '앱에서 접수된 문의와 아이디어, 첨부 사진을 확인하세요.'],
   members: ['회원', '회원 정보를 확인하고 푸시 발송 대상을 찾으세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
@@ -75,18 +78,19 @@ function selectTab(tab, options = {}) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal'].includes(tab);
-  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal'].includes(tab);
+  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
+  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal'].includes(tab);
+  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
   if (tab === 'legal') void legal.load();
+  if (tab === 'support') void support.load();
   if (tab === 'members') void members.load();
   if (tab === 'admins') void loadAdmins();
   if (tab === 'prompts') void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal']) $(name).hidden = name !== tab;
+  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -308,6 +312,7 @@ try {
   if (!config.url || !config.key) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
   client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   announcements = createAnnouncements(() => client);
+  support = createSupport(() => client);
   members = createMembers(() => client, ids => { selectTab('push', { skipLoad: true }); void announcements.openForMembers(ids); });
   const { data: { session }, error } = await client.auth.getSession();
   history.replaceState({}, '', '/admin');
