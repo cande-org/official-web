@@ -37,6 +37,7 @@ const server = createServer(async (req, res) => {
       !(
         relative === "index.html" ||
         relative === "privacy.html" ||
+        relative === "account-deletion.html" ||
         relative === "app-ads.txt" ||
         relative === "terms.html" ||
         relative === "legal.css" ||

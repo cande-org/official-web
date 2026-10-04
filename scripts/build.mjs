@@ -7,6 +7,7 @@ await mkdir(dist, { recursive: true });
 for (const path of [
   "index.html",
   "privacy.html",
+  "account-deletion.html",
   "app-ads.txt",
   "terms.html",
   "style.css",

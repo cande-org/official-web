@@ -3,8 +3,9 @@ const copy = {
     skip: "Skip to content",
     privacyLink: "Privacy Policy",
     termsLink: "Terms of Service",
+    accountDeletionLink: "Jeongbyeong Balsa account deletion",
     backHome: "Home",
-    effectiveDate: "Effective October 1, 2026 · Prepared September 19, 2026",
+    effectiveDate: "Effective October 5, 2026 · Prepared September 19, 2026",
     privacyReview:
       "Scheduled policy draft. Actual international processing locations and provider deletion/backup periods will be finalized against operational contracts before the effective date.",
     navService: "Service",
@@ -99,8 +100,8 @@ function setLanguage(language) {
     document.title = title + " | Cande";
     document.querySelector('meta[name="description"]').content =
       language === "ko"
-        ? "Cande 정병발사 " + title + ". 시행일 2026년 10월 1일."
-        : "Cande Jeongbyeong Balsa " + title + ". Effective October 1, 2026.";
+        ? "Cande 정병발사 " + title + ". 시행일 2026년 10월 5일."
+        : "Cande Jeongbyeong Balsa " + title + ". Effective October 5, 2026.";
     const anchor = location.hash.match(/^#(privacy|terms)-(ko|en)-(\d+)$/);
     if (anchor && anchor[2] !== language) {
       history.replaceState(
@@ -109,6 +110,8 @@ function setLanguage(language) {
         "#" + anchor[1] + "-" + language + "-" + anchor[3],
       );
     }
+  } else if (page === "accountDeletion") {
+    document.title = copy[language].accountDeletionLink + " | Cande";
   } else {
     document.title =
       language === "ko"
