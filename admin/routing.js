@@ -45,6 +45,7 @@ export function createAdminRouter({ window: win = window, onNavigate, canNavigat
   function pop(event) {
     const next = readAdminRoute(win.location.href), target = event.state?.adminRouteIndex;
     if (restoring) { restoring = false; return; }
+    if (sameRoute(current, next)) { if (Number.isInteger(target)) index = target; return; }
     if (!sameRoute(current, next) && !canNavigate(next)) {
       if (Number.isInteger(target) && target !== index) { restoring = true; win.history.go(index - target); }
       else win.history.replaceState(stamp(), '', adminRouteUrl(current));

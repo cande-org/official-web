@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADMIN_TABS, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from '../admin/routing.js';
+import { ADMIN_TABS, createAdminRouter, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from '../admin/routing.js';
 const id = '00000000-0000-4000-8000-000000000001';
 test('menu and detail paths canonicalize', () => {
   for (const tab of ADMIN_TABS) assert.equal(adminRouteUrl(readAdminRoute(`/admin/${tab}`)), `/admin/${tab}`);
@@ -26,4 +26,12 @@ test('OAuth restores only the validated route; callback secrets and stale return
 });
 test('route remains usable if browser storage is unavailable', () => {
   assert.equal(adminRouteUrl(resumeAdminRoute({href:'https://cande.fyi/admin/support'}, {getItem(){throw Error();},removeItem(){throw Error();}})), '/admin/support');
+});
+
+test('history entries for in-page anchors do not discard or reopen the same detail', () => {
+  let listener, calls=0;
+  const win={location:{href:`https://cande.fyi/admin/push/${id}#page-title`}, history:{state:{adminRouteIndex:4}},addEventListener:(event,fn)=>{listener=fn;},removeEventListener:()=>{}};
+  const router=createAdminRouter({window:win,onNavigate:()=>{calls++;},canNavigate:()=>{throw Error('Same view should stay intact');}});
+  listener({state:{adminRouteIndex:4}});
+  assert.equal(calls,0);assert.equal(router.current.id,id);router.dispose();
 });
