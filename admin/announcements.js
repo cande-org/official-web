@@ -1,3 +1,4 @@
+import { createAnnouncementEditor } from './announcement-editor.js';
 import { createPhotoEditor } from './push-photo.js';
 import { scheduledTime, clickMetrics, memberUids } from './push-controls.js';
 const $ = (id) => document.getElementById(id);
@@ -18,6 +19,7 @@ export function createAnnouncements(client, onDetail = () => {}) {
   let currentPush = null, requestId = null, requestSignature = null;
   let photo = null, photoTicket = 0, photoPreparing = false, detailTicket = 0, announcementDirty = false, pushDirty = false;
   const photoEditor = createPhotoEditor();
+  const bodyEditor = createAnnouncementEditor(() => { announcementDirty = true; });
   const state = (kind, message, error = false) => { const target = $(`${kind === 'announcements' ? 'announcement' : 'push'}-status`); target.textContent = message; target.classList.toggle('error', error); };
   const dialogState = (kind, message) => { $(`${kind}-dialog-status`).textContent = message; };
   async function request(payload, endpoint = 'admin-announcements') {
@@ -26,7 +28,7 @@ export function createAnnouncements(client, onDetail = () => {}) {
     const { data: result, error } = await client().functions.invoke(endpoint, payload ? { method: 'POST', body: payload } : { method: 'GET' });
     if (error) {
       let code; try { code = (await error.context.clone().json()).error; } catch { /* Network error. */ }
-      const messages = { detail_not_found: '항목이 없거나 삭제되었습니다. 목록에서 다시 선택해 주세요.', invalid_image: '사진을 확인해 주세요. 알림용 사진은 1MB 이하의 JPEG로 변환되어야 합니다.', image_upload_failed: '사진을 업로드하지 못했습니다. 다시 시도해 주세요.', image_conflict: '사진을 다시 선택해 주세요.', invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_user_ids: '회원 UID를 확인해 주세요. 최대 100명까지 지정할 수 있습니다.', invalid_user_id: '올바른 회원 UID를 입력해 주세요.' };
+      const messages = { detail_not_found: '항목이 없거나 삭제되었습니다. 목록에서 다시 선택해 주세요.', invalid_body_runs: '본문 글꼴 정보를 확인해 주세요. 문구가 너무 잘게 나뉘었다면 글꼴 적용을 줄여 주세요.', invalid_image: '사진을 확인해 주세요. 알림용 사진은 1MB 이하의 JPEG로 변환되어야 합니다.', image_upload_failed: '사진을 업로드하지 못했습니다. 다시 시도해 주세요.', image_conflict: '사진을 다시 선택해 주세요.', invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_user_ids: '회원 UID를 확인해 주세요. 최대 100명까지 지정할 수 있습니다.', invalid_user_id: '올바른 회원 UID를 입력해 주세요.' };
       throw Error(messages[code] ?? '공지사항·푸시 요청을 완료하지 못했습니다. 다시 시도해 주세요.');
     }
     return result;
@@ -119,7 +121,7 @@ export function createAnnouncements(client, onDetail = () => {}) {
     current = item;
     $('announcement-dialog-title').textContent = item ? '공지사항 상세' : '새 공지';
     $('announcement-title').value = item?.title ?? '';
-    $('announcement-body').value = item?.body ?? '';
+    bodyEditor.load(item);
     $('announcement-published').checked = Boolean(item?.published_at);
     $('announcement-delete').hidden = !item; dialogState('announcement', '');
     if(!$('announcement-dialog').open)$('announcement-dialog').showModal(); $('announcement-title').focus();if(notify)onDetail('announcements',item?.id??'new');
@@ -128,7 +130,7 @@ export function createAnnouncements(client, onDetail = () => {}) {
     event.preventDefault(); if (busy) return;
     busy = true; $('announcement-form').inert = true; dialogState('announcement', '저장 중…');
     try {
-      await request({ action: 'save', id: current?.id, title: $('announcement-title').value.trim(), body: $('announcement-body').value.trim(), targetScreen: current?.target_screen ?? 'announcements', published: $('announcement-published').checked });
+      await request({ action: 'save', id: current?.id, title: $('announcement-title').value.trim(), ...bodyEditor.value(), targetScreen: current?.target_screen ?? 'announcements', published: $('announcement-published').checked });
       $('announcement-dialog').close(); await load(); state('announcements', '공지사항을 저장했습니다.');
     } catch (error) { dialogState('announcement', error.message); }
     finally { busy = false; $('announcement-form').inert = false; }

@@ -420,3 +420,17 @@ h1{font-size:25px}
 
 #support-detail-dialog::backdrop{background:#11182766}#support .collection-tools{flex-wrap:wrap}#support-detail-body{margin-bottom:16px}
 #support .support-preview{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:240px}#support .support-preview-copy{flex:1;min-width:0}#support .support-preview-copy .row-summary{max-width:340px;margin-bottom:0}#support .support-thumbnail{flex:0 0 64px;width:64px;height:64px;min-height:64px;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:#f7f8fa;font-size:11px;color:#737b88}#support .support-thumbnail img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* Inline notice fonts use the same bundled files as the Flutter reader. */
+@font-face{font-family:NoticePretendard;src:url('/assets/notice-Pretendard-Regular.otf') format('opentype');font-display:swap}
+@font-face{font-family:NoticeMunmak;src:url('/assets/MUNMAK_HAEBANCHE.otf') format('opentype');font-display:swap}
+.announcement-font-tools{display:flex;gap:8px;flex-wrap:wrap}
+#announcement-font-hint{margin:-6px 0 0;font-size:12px}
+.announcement-preview{border-top:1px solid #e4e7eb;padding-top:14px}
+.announcement-preview h3{font-size:12px;color:#666;margin:0 0 10px}
+#announcement-body-preview{font-family:NoticePretendard,sans-serif;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;min-height:40px;color:#1a1a1a}
+.notice-font-pretendard{font-family:NoticePretendard,sans-serif}
+.notice-font-munmak{font-family:NoticeMunmak,NoticePretendard,sans-serif}
+#announcement-form .actions{position:static;left:auto;right:auto;bottom:auto;padding:14px 0 0;border-top:1px solid #e4e7eb;z-index:auto;flex-wrap:wrap}
+#announcement-form .checkbox-row{flex-direction:row;justify-content:flex-start}
+#announcement-form .checkbox-row input{margin:0}
