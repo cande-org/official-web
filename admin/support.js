@@ -4,15 +4,9 @@ const date=v=>new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
 const states={open:'접수',answered:'답변됨',closed:'종료'};
 const alerts={pending:'발송 대기',sending:'발송 중',sent:'발송됨',failed:'발송 실패',historical:'알림 연결 전 접수'};
 const attachmentUrl=value=>{try{const url=new URL(value);return url.protocol==='https:'&&url.hostname.endsWith('.supabase.co')&&url.pathname.startsWith('/storage/v1/object/sign/mental-media/')?url.href:null;}catch{return null;}};
-export function supportTarget(){
- const key='mental:support:target',valid=id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id??'');
- const id=new URLSearchParams(location.search).get('support');
- try{if(valid(id)){sessionStorage.setItem(key,id);return id;}const saved=sessionStorage.getItem(key);return valid(saved)?saved:null;}catch{return valid(id)?id:null;}
-}
-export function createSupport(getClient){
+export function createSupport(getClient, { onDetail = () => {} } = {}){
  let generation=0,ticket=0,detailTicket=0;
  const view={category:'',query:'',page:1,size:20};
- let deepId=supportTarget();
  const status=(text,error=false)=>{$('support-status').textContent=text;$('support-status').classList.toggle('error',error);};
  async function request(body){
   const {data}=await getClient().auth.getSession();if(!data.session)throw Error('관리자 로그인이 필요합니다.');
@@ -50,13 +44,13 @@ export function createSupport(getClient){
   const current=++ticket,session=generation;status('문의·아이디어를 불러오는 중…');$('support-refresh').disabled=true;
   try{const data=await request({action:'list',...view});if(current!==ticket||session!==generation)return;
    const last=Math.max(1,Math.ceil(data.total/view.size));if(view.page>last){view.page=last;return load();}
-   render(data);status('');if(deepId){const id=deepId;deepId=null;try{sessionStorage.removeItem('mental:support:target');}catch{}void detail(id);}
+   render(data);status('');
   }catch(e){if(current===ticket&&session===generation){$('support-list').replaceChildren();status(e.message,true);}}
   finally{if(current===ticket&&session===generation)$('support-refresh').disabled=false;}
  }
- async function detail(id){
+ async function detail(id,notify=true){
   const current=++detailTicket,session=generation;clearDetail();$('support-detail-status').textContent='내용을 불러오는 중…';
-  if(!$('support-detail-dialog').open)$('support-detail-dialog').showModal();$('support-detail-close').focus();
+  if(!$('support-detail-dialog').open)$('support-detail-dialog').showModal();$('support-detail-close').focus();if(notify)onDetail('support',id);
   try{const data=await request({action:'detail',id});if(current!==detailTicket||session!==generation||!$('support-detail-dialog').open)return;
    const item=data.requests[0],fields=$('support-detail-fields');
    for(const [label,value] of [['접수 번호',item.id],['유형',item.category],['제목',item.subject||'없음'],['보낸 사람',item.nickname||(item.is_guest?'게스트':'프로필 미설정')],['회신 이메일',item.reply_email||'없음'],['접수 시각 (KST)',date(item.created_at)],['상태',states[item.status]||item.status],['Slack 알림',alerts[item.notification_state]||'확인 필요']])fields.append(el('dt',label),el('dd',value));
@@ -80,6 +74,6 @@ export function createSupport(getClient){
  $('support-search-clear').onclick=()=>{view.query='';view.category='';view.page=1;$('support-search').value='';$('support-category').value='';void load();};
  $('support-size').onchange=e=>{view.size=Number(e.target.value);view.page=1;void load();};
  $('support-prev').onclick=()=>{view.page--;void load();};$('support-next').onclick=()=>{view.page++;void load();};
- $('support-detail-close').onclick=close;$('support-detail-done').onclick=close;$('support-detail-dialog').addEventListener('close',()=>{detailTicket++;clearDetail();});
- return {load,clear:()=>{generation++;ticket++;detailTicket++;view.page=1;view.query='';view.category='';$('support-search').value='';$('support-category').value='';$('support-list').replaceChildren();$('support-count').textContent='';$('support-page').textContent='';$('support-status').textContent='';$('support-refresh').disabled=false;if($('support-detail-dialog').open)$('support-detail-dialog').close();clearDetail();}};
+ $('support-detail-close').onclick=close;$('support-detail-done').onclick=close;$('support-detail-dialog').addEventListener('close',()=>{if(!$('support-detail-dialog').open){detailTicket++;clearDetail();}});
+ return {load,openDetail:id=>detail(id,false),closeDetail:close,clear:()=>{generation++;ticket++;detailTicket++;view.page=1;view.query='';view.category='';$('support-search').value='';$('support-category').value='';$('support-list').replaceChildren();$('support-count').textContent='';$('support-page').textContent='';$('support-status').textContent='';$('support-refresh').disabled=false;if($('support-detail-dialog').open)$('support-detail-dialog').close();clearDetail();}};
 }

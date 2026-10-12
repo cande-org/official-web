@@ -1,5 +1,5 @@
 // Paginated collection views with isolated item edits. Only onSave persists data.
-export function createContentLists({ getSnapshot, onSave, onStage, onError }) {
+export function createContentLists({ getSnapshot, onSave, onStage, onError, onDetail = () => {} }) {
   const $ = id => document.getElementById(id);
   const el = (tag,text,cls) => { const n=document.createElement(tag); if(text!=null)n.textContent=text;if(cls)n.className=cls;return n; };
   const button = (text,run,cls) => {const b=el('button',text,cls);b.type='button';b.onclick=run;return b;};
@@ -51,7 +51,7 @@ export function createContentLists({ getSnapshot, onSave, onStage, onError }) {
     const wrap=el('label',label),input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;else input.rows=type==='textarea'&&name==='answer'?7:3;
     input.name=name;input.value=value;input.required=true;if(maxLength)input.maxLength=maxLength;if(min!=null)input.min=min;if(max!=null)input.max=max;if(type==='number')input.step='1';wrap.append(input);return wrap;
   }
-  function openItem(kind,key=null){
+  function openItem(kind,key=null,notify=true){
     if(saving)return;
     const list=listOf(kind),index=key==null?-1:list.findIndex(item=>keyOf(kind,item)===key);
     if(key!=null&&index<0)return;
@@ -70,7 +70,7 @@ export function createContentLists({ getSnapshot, onSave, onStage, onError }) {
     }
     $('item-fields').append(field('노출 순서',index<0?list.length+1:index+1,{name:'position',type:'number',min:1,max:list.length+(index<0?1:0)}));
     const check=el('label',null,'check'),input=el('input');input.type='checkbox';input.name='enabled';input.checked=item.enabled;check.append(input,document.createTextNode('앱에 노출'));$('item-fields').append(check);
-    dialog.showModal();dialog.scrollTop=0;$('item-fields').querySelector('input,textarea').focus();
+    if(!dialog.open)dialog.showModal();if(notify)onDetail(kind,key??'new');dialog.scrollTop=0;$('item-fields').querySelector('input,textarea').focus();
   }
   function close(force=false){
     if(!force&&(saving||(edit?.changed&&!confirm('저장하지 않은 수정을 버리고 닫을까요?'))))return;
@@ -102,5 +102,5 @@ export function createContentLists({ getSnapshot, onSave, onStage, onError }) {
   $('item-delete').onclick=()=>persist(true);$('item-cancel').onclick=()=>close();$('item-close').onclick=()=>close();dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
   toolbar('products');toolbar('faqs');
   function render(){renderList('products');renderList('faqs');}
-  return {render,hasUnsavedChanges:()=>Boolean(edit?.changed),addFaq:()=>openItem('faqs'),reset:()=>{epoch++;close(true);for(const kind of ['products','faqs'])views[kind].page=1;}};
+  return {render,openDetail:(kind,id)=>{if(id==='new'){openItem(kind,null,false);return true;}if(!listOf(kind).some(item=>keyOf(kind,item)===id))return false;openItem(kind,id,false);return true;},closeDetail:()=>close(true),isBusy:()=>saving,hasUnsavedChanges:()=>Boolean(edit?.changed),addFaq:()=>openItem('faqs'),reset:()=>{epoch++;close(true);for(const kind of ['products','faqs'])views[kind].page=1;}};
 }

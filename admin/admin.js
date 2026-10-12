@@ -1,8 +1,9 @@
+import { createAdminRouter, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from './routing.js';
 import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
 import { createContentLists } from './content-list.js';
 import { createPromptStudio } from './prompt-studio.js';
 import { createAnnouncements } from './announcements.js';
-import { createSupport, supportTarget } from './support.js';
+import { createSupport } from './support.js';
 import { createMembers } from './members.js';
 import { createLegalDocuments } from './legal.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
@@ -14,7 +15,7 @@ let announcements;
 let members;
 let legal;
 let support;
-let client, snapshot, dirty = false, busy = false, activeTab = (new URLSearchParams(location.search).get('tab') === 'support' || supportTarget()) ? 'support' : 'dashboard', authGeneration = 0;
+let client, snapshot, dirty = false, busy = false, activeTab = readAdminRoute(location.href).tab, authGeneration = 0;
 const status = (message, error = false) => { $('status').textContent = message; $('status').className = error ? 'error' : ''; };
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
 const mobileMenu = matchMedia('(max-width: 760px)');
@@ -30,7 +31,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -62,6 +63,55 @@ const pageMeta = {
   members: ['회원', '회원 정보를 확인하고 푸시 발송 대상을 찾으세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
+const detailDialogs = { products:'item-dialog',faqs:'item-dialog',announcements:'announcement-dialog',push:'push-detail-dialog',legal:'legal-dialog',support:'support-detail-dialog',members:'member-detail-dialog' };
+const quietClose = new WeakSet();
+const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
+  if(busy||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
+  return !(contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
+}});
+function rememberDetail(tab,id,version=null){router.go({tab,id,version},{notify:false,check:false});}
+function closeRouteDialogs(){
+  for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);
+  contentLists?.closeDetail();announcements?.closeDetails();members?.closeDetail();support?.closeDetail();legal?.closeDetail();
+  if($('preview-dialog').open)$('preview-dialog').close();
+}
+for(const id of new Set(Object.values(detailDialogs))){
+  const dialog=$(id);
+  dialog.addEventListener('close',()=>{
+    if(quietClose.delete(dialog))return;
+    if(dialog.open)return;
+    const route=router.current;
+    if(detailDialogs[route.tab]===id&&route.id)router.go({tab:route.tab,id:null,version:null},{notify:false,check:false});
+  });
+}
+$('push-dialog').addEventListener('close',()=>{
+  const dialog=$('push-dialog');if(quietClose.delete(dialog))return;
+  if(dialog.open)return;
+  if(router.current.tab==='push'&&router.current.id==='new')router.go({tab:'push',id:null,version:null},{notify:false,check:false});
+});
+let routeTicket=0;
+async function applyRoute(route){
+  const ticket=++routeTicket;
+  if(!snapshot)return;
+  closeRouteDialogs();selectTab(route.tab,{skipLoad:true});
+  try{
+    const module=route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
+    if(module){const loaded=await module.load();if((module===announcements||module===legal)&&loaded!==true)return;}
+    else if(route.tab==='dashboard')await loadMetrics();
+    else if(route.tab==='admins')await loadAdmins();
+    else if(route.tab==='prompts')await promptStudio.load();
+    if(ticket!==routeTicket||!snapshot||adminRouteUrl(router.current)!==adminRouteUrl(route))return;
+    if(!route.id)return;
+    let result;
+    if(['products','faqs'].includes(route.tab))result=contentLists.openDetail(route.tab,route.id);
+    else if(['announcements','push'].includes(route.tab))result=await announcements.openDetail(route.tab,route.id);
+    else if(route.tab==='legal'){
+      result=legal.openDetail(route.id,route.version);
+      if(result&&ticket===routeTicket)router.go({...route,version:result},{replace:true,notify:false,check:false});
+    }else result=await module?.openDetail(route.id);
+    if(result===false&&ticket===routeTicket)status('항목이 없거나 삭제되었습니다. 목록에서 다시 선택해 주세요.',true);
+  }catch(error){if(ticket===routeTicket)status(error.message,true);}
+}
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
 function action(text, handler) { const b = node('button', text); b.type = 'button'; b.addEventListener('click', handler); return b; }
 function render() {
@@ -70,7 +120,7 @@ function render() {
   $('dirty').textContent = dirty ? '저장하지 않은 변경사항' : '저장된 초안';
   contentLists.render();
   $('payment-notice').value = snapshot.draft.paymentNotice;
-  selectTab(activeTab);
+  selectTab(activeTab,{skipLoad:true});
 }
 function selectTab(tab, options = {}) {
   const changed = activeTab !== tab;
@@ -83,12 +133,12 @@ function selectTab(tab, options = {}) {
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
   $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
-  if (tab === 'dashboard') { resizeCharts(); void loadMetrics(); }
-  if (tab === 'legal') void legal.load();
-  if (tab === 'support') void support.load();
-  if (tab === 'members') void members.load();
-  if (tab === 'admins') void loadAdmins();
-  if (tab === 'prompts') void promptStudio.load();
+  if (tab === 'dashboard') { resizeCharts(); if(!options.skipLoad)void loadMetrics(); }
+  if (tab === 'legal' && !options.skipLoad) void legal.load();
+  if (tab === 'support' && !options.skipLoad) void support.load();
+  if (tab === 'members' && !options.skipLoad) void members.load();
+  if (tab === 'admins' && !options.skipLoad) void loadAdmins();
+  if (tab === 'prompts' && !options.skipLoad) void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
   for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
@@ -107,7 +157,7 @@ async function load() {
   if (busy) return;
   const generation = authGeneration;
   busy = true; $('auth-retry').hidden = true; status('콘텐츠를 불러오는 중…');
-  try { const result = await request(); if (generation !== authGeneration) return; snapshot = result; dirty = false; render(); status(''); }
+  try { const result = await request(); if (generation !== authGeneration) return; snapshot = result; dirty = false; render(); status(''); await applyRoute(router.current); }
   catch (error) { status(error.message, true); if(!snapshot){$('auth-retry').hidden = [401,403].includes(error.status);$('login').hidden = ![401,403].includes(error.status);} }
   finally { busy = false; }
 }
@@ -115,7 +165,7 @@ async function save(publish) {
   if (busy) return;
   // Validate hidden panels too and reveal the first invalid field.
   const invalid = $('form').querySelector(':invalid');
-  if (invalid) { selectTab(invalid.closest('section').id); invalid.reportValidity(); return; }
+  if (invalid) { router.go({tab:invalid.closest('section').id,id:null,version:null}); invalid.reportValidity(); return; }
   if (publish && !confirm('현재 초안을 앱에 공개할까요? 노출을 끈 상품은 새 구매 목록에서 숨겨집니다. 기존 구매·구독은 유지됩니다.')) return;
   const generation = authGeneration;
   busy = true; $('editor').inert = true; status(publish ? '공개 중…' : '저장 중…');
@@ -133,15 +183,15 @@ async function saveItemContent(content) {
     snapshot = result; dirty = false; render(); status('초안을 저장했습니다. 앱 반영은 ‘앱에 공개’를 눌러 주세요.');
   } finally { busy = false; $('editor').inert = false; }
 }
-contentLists = createContentLists({ getSnapshot: () => snapshot, onSave: saveItemContent, onStage: content => { snapshot.draft = content; markDirty(); }, onError: message => status(message,true) });
+contentLists = createContentLists({ getSnapshot: () => snapshot, onSave: saveItemContent, onStage: content => { snapshot.draft = content; markDirty(); }, onError: message => status(message,true),onDetail:rememberDetail });
 promptStudio = createPromptStudio(() => client);
-legal = createLegalDocuments(() => client);
+legal = createLegalDocuments(() => client,rememberDetail);
 $('form').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
 $('publish').onclick = () => save(true);
 $('reload').onclick = () => { if (!dirty || confirm('저장하지 않은 변경사항을 버리고 다시 불러올까요?')) load(); };
 $('payment-notice').oninput = (e) => { snapshot.draft.paymentNotice = e.target.value; markDirty(); };
 $('add-faq').onclick = () => contentLists.addFaq();
-document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => selectTab(b.dataset.tab));
+document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => router.go({tab:b.dataset.tab,id:null,version:null}));
 $('preview').onclick = () => {
   const body = $('preview-body'); body.replaceChildren();
   for (const p of snapshot.draft.products.filter((p) => p.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', p.title), node('p', p.description), node('p', `참고 가격 ${p.referencePriceKrw.toLocaleString('ko-KR')}원`)); body.append(section); }
@@ -149,10 +199,11 @@ $('preview').onclick = () => {
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
-window.addEventListener('beforeunload', (e) => { if (dirty || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (dirty || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
 $('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
+  try{sessionStorage.setItem(RETURN_ROUTE_KEY,adminRouteUrl(router.current));}catch{/* Same-window links still work when storage is blocked. */}
   const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${location.origin}/admin`, queryParams: { prompt: 'select_account' } } });
   if (error) status('로그인을 시작하지 못했습니다.', true);
 };
@@ -310,12 +361,13 @@ try {
   if (!response.ok) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
   const config = await response.json();
   if (!config.url || !config.key) throw Error('관리자 사이트 연결 설정을 확인해 주세요.');
+  const authEntryUrl=location.href;
   client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-  announcements = createAnnouncements(() => client);
-  support = createSupport(() => client);
-  members = createMembers(() => client, ids => { selectTab('push', { skipLoad: true }); void announcements.openForMembers(ids); });
+  announcements = createAnnouncements(() => client,rememberDetail);
+  support = createSupport(() => client,{onDetail:rememberDetail});
+  members = createMembers(() => client, ids => { router.go({tab:'push',id:null,version:null},{notify:false,check:false});selectTab('push',{skipLoad:true});void announcements.openForMembers(ids); },rememberDetail);
   const { data: { session }, error } = await client.auth.getSession();
-  history.replaceState({}, '', '/admin');
+  const route=resumeAdminRoute({href:authEntryUrl},sessionStorage);router.initialize(route);activeTab=route.tab;
   if (error) throw Error('로그인 결과를 확인하지 못했습니다. 다시 로그인해 주세요.');
   if (session) { $('logout').hidden = false; await load(); } else { $('login').hidden = false; status('관리자 계정으로 로그인해 주세요.'); }
   client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { authGeneration++; snapshot = null; dirty = false; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; } });

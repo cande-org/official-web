@@ -11,12 +11,12 @@ const audienceLabel = audience => {
   return [audience.messageType==='service'?'서비스 안내':'마케팅 동의 · 08–21시',audience.userId && `회원 UID ${audience.userId}`, Array.isArray(audience.userIds) && `지정 회원 ${audience.userIds.length}명`, audience.activeWithinDays && `최근 ${audience.activeWithinDays}일 활동`, audience.joinedWithinDays && `가입 ${audience.joinedWithinDays}일 이내`, audience.subscription && (audience.subscription === 'active' ? '구독 중' : '구독 없음')].filter(Boolean).join(' · ');
 };
 
-export function createAnnouncements(client) {
+export function createAnnouncements(client, onDetail = () => {}) {
   let data = { announcements: [], campaigns: [], pushReady: false };
   const views = { announcements: { page: 1, size: 20, query: '', filter: 'all' }, push: { page: 1, size: 20, query: '' } };
   let current = null, busy = false, preview = null, previewTicket = 0, generation = 0;
   let currentPush = null, requestId = null, requestSignature = null;
-  let photo = null, photoTicket = 0, photoPreparing = false;
+  let photo = null, photoTicket = 0, photoPreparing = false, detailTicket = 0, announcementDirty = false, pushDirty = false;
   const photoEditor = createPhotoEditor();
   const state = (kind, message, error = false) => { const target = $(`${kind === 'announcements' ? 'announcement' : 'push'}-status`); target.textContent = message; target.classList.toggle('error', error); };
   const dialogState = (kind, message) => { $(`${kind}-dialog-status`).textContent = message; };
@@ -26,7 +26,7 @@ export function createAnnouncements(client) {
     const { data: result, error } = await client().functions.invoke(endpoint, payload ? { method: 'POST', body: payload } : { method: 'GET' });
     if (error) {
       let code; try { code = (await error.context.clone().json()).error; } catch { /* Network error. */ }
-      const messages = { invalid_image: '사진을 확인해 주세요. 알림용 사진은 1MB 이하의 JPEG로 변환되어야 합니다.', image_upload_failed: '사진을 업로드하지 못했습니다. 다시 시도해 주세요.', image_conflict: '사진을 다시 선택해 주세요.', invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_user_ids: '회원 UID를 확인해 주세요. 최대 100명까지 지정할 수 있습니다.', invalid_user_id: '올바른 회원 UID를 입력해 주세요.' };
+      const messages = { detail_not_found: '항목이 없거나 삭제되었습니다. 목록에서 다시 선택해 주세요.', invalid_image: '사진을 확인해 주세요. 알림용 사진은 1MB 이하의 JPEG로 변환되어야 합니다.', image_upload_failed: '사진을 업로드하지 못했습니다. 다시 시도해 주세요.', image_conflict: '사진을 다시 선택해 주세요.', invalid_schedule: '예약 시각은 현재 이후부터 90일 이내로 입력해 주세요.', campaign_not_cancelable: '이미 발송을 시작했거나 취소할 수 없는 알림입니다. 목록을 새로고침해 주세요.', invalid_user_ids: '회원 UID를 확인해 주세요. 최대 100명까지 지정할 수 있습니다.', invalid_user_id: '올바른 회원 UID를 입력해 주세요.' };
       throw Error(messages[code] ?? '공지사항·푸시 요청을 완료하지 못했습니다. 다시 시도해 주세요.');
     }
     return result;
@@ -65,7 +65,7 @@ export function createAnnouncements(client) {
     if (!list.length) { const row = el('tr'), empty = el('td', data.announcements.length ? '검색 조건에 맞는 공지사항이 없습니다.' : '등록된 공지사항이 없습니다. 새 공지를 추가해 주세요.', 'empty-list'); empty.colSpan = 6; row.append(empty); body.append(row); }
     $('announcement-list').replaceChildren(wrapper); pager('announcements', list.length, pages);
   }
-  function openPushDetail(item) {
+  function openPushDetail(item, notify = true) {
     currentPush = item;
     const metrics = clickMetrics(item);
     const fields = $('push-detail-fields'); fields.replaceChildren();
@@ -77,7 +77,7 @@ export function createAnnouncements(client) {
     fields.append(el('dt', '첨부 사진'), image);
     $('push-cancel-reservation').hidden = item.status !== 'scheduled';
     $('push-detail-status').textContent = '';
-    $('push-detail-dialog').showModal(); $('push-detail-close').focus();
+    if(!$('push-detail-dialog').open)$('push-detail-dialog').showModal(); $('push-detail-close').focus();if(notify)onDetail('push',item.id);
   }
   async function cancelReservation() {
     if (!currentPush || busy || !confirm('이 알림의 예약을 취소할까요?')) return;
@@ -114,14 +114,15 @@ export function createAnnouncements(client) {
     try { const result = await request(); if (ticket !== generation) return false; data = result; render(); state('announcements', ''); state('push', ''); return true; }
     catch (error) { if (ticket === generation) state($('push').hidden ? 'announcements' : 'push', error.message, true); return false; }
   }
-  function openAnnouncement(item = null) {
+  function openAnnouncement(item = null, notify = true) {
+    announcementDirty = false;
     current = item;
     $('announcement-dialog-title').textContent = item ? '공지사항 상세' : '새 공지';
     $('announcement-title').value = item?.title ?? '';
     $('announcement-body').value = item?.body ?? '';
     $('announcement-published').checked = Boolean(item?.published_at);
     $('announcement-delete').hidden = !item; dialogState('announcement', '');
-    $('announcement-dialog').showModal(); $('announcement-title').focus();
+    if(!$('announcement-dialog').open)$('announcement-dialog').showModal(); $('announcement-title').focus();if(notify)onDetail('announcements',item?.id??'new');
   }
   async function saveAnnouncement(event) {
     event.preventDefault(); if (busy) return;
@@ -146,11 +147,12 @@ export function createAnnouncements(client) {
     return result;
   }
   function invalidatePreview() { preview = null; previewTicket++; $('push-recipient-count').textContent = '대상 수를 확인해 주세요.'; $('push-send').disabled = !data.pushReady || photoPreparing; }
-  function openPush() {
+  function openPush(notify = true) {
+    pushDirty = false;
     resetPhoto(); $('push-form').reset(); invalidatePreview(); dialogState('push', '');
     requestId = null; requestSignature = null; updateSchedule();
     if (!data.pushReady) dialogState('push', '푸시 서버 연결 후 발송할 수 있습니다.');
-    $('push-dialog').showModal(); $('push-title').focus();
+    if(!$('push-dialog').open)$('push-dialog').showModal(); $('push-title').focus();if(notify)onDetail('push','new');
   }
   function updateSchedule() {
     const scheduled = $('push-timing').value === 'scheduled';
@@ -204,6 +206,10 @@ export function createAnnouncements(client) {
     finally { busy = false; $('push-form').inert = false; }
   }
   $('announcement-add').onclick = () => openAnnouncement();
+  $('announcement-form').addEventListener('input',()=>{announcementDirty=true;});
+  $('push-form').addEventListener('input',()=>{pushDirty=true;});
+  $('announcement-dialog').addEventListener('close',()=>{if(!$('announcement-dialog').open){announcementDirty=false;current=null;}});
+  $('push-dialog').addEventListener('close',()=>{if(!$('push-dialog').open)pushDirty=false;});
   $('announcement-refresh').onclick = load;
   $('announcement-form').onsubmit = saveAnnouncement;
   $('announcement-delete').onclick = removeAnnouncement;
@@ -226,7 +232,7 @@ export function createAnnouncements(client) {
       const prepared = await photoEditor.edit(file);
       if (ticket !== photoTicket) return;
       if (prepared) {
-        const old = photo; photo = prepared;
+        const old = photo; photo = prepared; pushDirty = true;
         $('push-photo-image').src = prepared.url; $('push-photo-preview').hidden = false;
         if (old?.uploaded) void request({ action: 'discard', id: old.id }, 'admin-push-image').catch(() => {});
       }
@@ -254,5 +260,15 @@ export function createAnnouncements(client) {
   $('push-detail-close').onclick = () => $('push-detail-dialog').close();
   $('push-detail-done').onclick = () => $('push-detail-dialog').close();
   for (const field of ['push-user-ids', 'push-active', 'push-joined', 'push-subscription', 'push-message-type']) $(field).oninput = invalidatePreview;
-  return { load, openForMembers: async ids => { if (!await load()) return; openPush(); $('push-user-ids').value = ids.join('\n'); invalidatePreview(); }, clear: () => { generation++; resetPhoto(); invalidatePreview(); for (const id of ['announcement-dialog', 'push-dialog', 'push-detail-dialog']) if ($(id).open) $(id).close(); data = { announcements: [], campaigns: [], pushReady: false }; $('announcement-list').replaceChildren(); $('push-history').replaceChildren(); } };
+  async function openDetail(kind,id) {
+    if(id==='new'){if(kind==='push')openPush(false);else openAnnouncement(null,false);return true;}
+    const ticket=++detailTicket,session=generation;
+    let item=(kind==='push'?data.campaigns:data.announcements).find(item=>item.id===id);
+    if(!item){const result=await request({action:'detail',kind,id});if(ticket!==detailTicket||session!==generation)return false;item=result.item;}
+    if(!item)throw Error('항목이 없거나 삭제되었습니다.');
+    if(kind==='push')openPushDetail(item,false);else openAnnouncement(item,false);
+    return true;
+  }
+  const closeDetails=()=>{detailTicket++;for(const id of ['announcement-dialog','push-dialog','push-detail-dialog'])if($(id).open)$(id).close();announcementDirty=false;pushDirty=false;current=null;currentPush=null;};
+  return { load, openDetail, closeDetails,isBusy:()=>busy||photoPreparing,hasUnsavedChanges:()=>announcementDirty||pushDirty, openForMembers: async ids => { if (!await load()) return; openPush(); $('push-user-ids').value = ids.join('\n'); invalidatePreview(); }, clear: () => { generation++; resetPhoto(); invalidatePreview(); for (const id of ['announcement-dialog', 'push-dialog', 'push-detail-dialog']) if ($(id).open) $(id).close(); data = { announcements: [], campaigns: [], pushReady: false }; $('announcement-list').replaceChildren(); $('push-history').replaceChildren(); } };
 }

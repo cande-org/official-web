@@ -3,7 +3,7 @@ const el = (tag, text, className) => { const node=document.createElement(tag);if
 const button = (text, handler, className) => { const node=el('button',text,className);node.type='button';node.onclick=handler;return node; };
 const date = value => value ? new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}) : '기록 없음';
 
-export function createMembers(client, onPush) {
+export function createMembers(client, onPush, onDetail = () => {}) {
   let generation=0,ticket=0,detailTicket=0,member=null;
   const view={query:'',page:1,size:20};
   const status=(message,error=false)=>{ $('member-status').textContent=message;$('member-status').classList.toggle('error',error); };
@@ -46,11 +46,11 @@ export function createMembers(client, onPush) {
     }catch(error){if(current===ticket&&session===generation){$('member-list').replaceChildren();status(error.message,true);}}
     finally{if(current===ticket&&session===generation)$('member-refresh').disabled=false;}
   }
-  async function open(id) {
+  async function open(id, notify = true) {
     const current=++detailTicket,session=generation;member=null;
     $('member-detail-fields').replaceChildren();$('member-detail-uid').value=id;$('member-detail-copy').disabled=true;$('member-detail-push').disabled=true;
     $('member-detail-status').textContent='상세 정보를 불러오는 중…';
-    if(!$('member-detail-dialog').open)$('member-detail-dialog').showModal();$('member-detail-close').focus();
+    if(!$('member-detail-dialog').open)$('member-detail-dialog').showModal();$('member-detail-close').focus();if(notify)onDetail('members',id);
     try {
       const data=await request({action:'detail',id});if(current!==detailTicket||session!==generation||!$('member-detail-dialog').open)return;
       member=data.members[0];const fields=$('member-detail-fields');
@@ -59,6 +59,7 @@ export function createMembers(client, onPush) {
     }catch(error){if(current===detailTicket&&session===generation)$('member-detail-status').textContent=error.message;}
   }
   const close=()=>{detailTicket++;member=null;$('member-detail-dialog').close();};
+  $('member-detail-dialog').addEventListener('close',()=>{if(!$('member-detail-dialog').open){detailTicket++;member=null;}});
   $('member-refresh').onclick=load;
   $('member-search-form').onsubmit=e=>{e.preventDefault();view.query=$('member-search').value.trim();view.page=1;void load();};
   $('member-search-clear').onclick=()=>{$('member-search').value='';view.query='';view.page=1;void load();};
@@ -67,5 +68,5 @@ export function createMembers(client, onPush) {
   $('member-detail-close').onclick=close;$('member-detail-done').onclick=close;
   $('member-detail-copy').onclick=()=>{if(member)void copy(member.id,$('member-detail-status'));};
   $('member-detail-push').onclick=()=>{if(!member||member.is_admin||!member.push_devices)return;const id=member.id;close();onPush([id]);};
-  return {load,clear:()=>{generation++;ticket++;detailTicket++;member=null;view.page=1;view.query='';$('member-search').value='';$('member-list').replaceChildren();$('member-count').textContent='';$('member-page').textContent='';$('member-status').textContent='';$('member-detail-fields').replaceChildren();$('member-detail-uid').value='';$('member-detail-status').textContent='';$('member-refresh').disabled=false;if($('member-detail-dialog').open)$('member-detail-dialog').close();}};
+  return {load,openDetail:id=>open(id,false),closeDetail:close,clear:()=>{generation++;ticket++;detailTicket++;member=null;view.page=1;view.query='';$('member-search').value='';$('member-list').replaceChildren();$('member-count').textContent='';$('member-page').textContent='';$('member-status').textContent='';$('member-detail-fields').replaceChildren();$('member-detail-uid').value='';$('member-detail-status').textContent='';$('member-refresh').disabled=false;if($('member-detail-dialog').open)$('member-detail-dialog').close();}};
 }

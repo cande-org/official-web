@@ -9,6 +9,50 @@
     {
       "source": "/admin/",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/dashboard/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/products/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/faqs/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/notice/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/prompts/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/announcements/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/push/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/legal/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/support/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/members/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/admins/:path*",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [

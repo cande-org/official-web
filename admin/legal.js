@@ -1,7 +1,7 @@
 import {nextLegalVersion, withLegalFooter} from './legal-versioning.js';
 
 // Plain-text versioned documents. Published versions remain read-only.
-export function createLegalDocuments(getClient) {
+export function createLegalDocuments(getClient, onDetail = () => {}) {
   const $=id=>document.getElementById(id);
   let data=null, generation=0, busy=false, dirty=false, active=null;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!=null)el.textContent=text;return el;};
@@ -17,12 +17,14 @@ export function createLegalDocuments(getClient) {
       const open=node('button','버전 관리');open.type='button';open.onclick=()=>openDocument(doc);item.append(info,open);$('legal-list').append(item);
     }
   }
-  function openDocument(doc){
+  function openDocument(doc, versionId=null, notify=true){
     if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;
     status('');active={doc,version:null};dirty=false;$('legal-dialog-title').textContent=doc.label;
     const versions=$('legal-versions');versions.replaceChildren();
     for(const version of doc.versions){const option=node('option',`v${version.version} · ${version.publishedAt?'공개됨':'초안'} · 시행 ${version.effectiveOn}`);option.value=version.id;versions.append(option);}
-    fill(doc.versions.find(v=>!v.publishedAt)??doc.versions.find(v=>v.id===doc.currentVersionId)??null);
+    if(versionId&&versionId!=='new'&&!doc.versions.some(v=>v.id===versionId))throw Error('문서 버전이 없거나 삭제되었습니다.');
+    fill(versionId==='new'?null:versionId?doc.versions.find(v=>v.id===versionId):doc.versions.find(v=>!v.publishedAt)??doc.versions.find(v=>v.id===doc.currentVersionId)??null);
+    if(notify)onDetail('legal',doc.key,active.version?.id??'new');
     if(!$('legal-dialog').open)$('legal-dialog').showModal();
   }
   function syncFooter(){
@@ -46,7 +48,7 @@ export function createLegalDocuments(getClient) {
     $('legal-save').disabled=locked;$('legal-publish').disabled=locked;
     $('legal-dialog-hint').textContent=locked?'공개한 본문은 수정할 수 없습니다. ‘새 버전 초안’을 만들어 변경하세요.':'초안 저장 후 공개하면 앱에서 이 버전을 읽습니다. 필수 약관의 새 버전에는 다시 동의를 받습니다.';
   }
-  async function load(){if(busy)return;busy=true;const gen=generation;status('약관을 불러오는 중…');try{const result=await request();if(gen!==generation)return;data=result;render();status('');}catch(error){if(gen===generation)status(error.message,true);}finally{if(gen===generation)busy=false;}}
+  async function load(){if(busy)return;busy=true;const gen=generation;status('약관을 불러오는 중…');try{const result=await request();if(gen!==generation)return;data=result;render();status('');return true;}catch(error){if(gen===generation)status(error.message,true);}finally{if(gen===generation)busy=false;}}
   async function save(publish){
     if(busy||!active||!$('legal-form').reportValidity())return;
     syncFooter();
@@ -61,9 +63,10 @@ export function createLegalDocuments(getClient) {
   $('legal-refresh').onclick=()=>{if(!dirty||confirm('편집 내용을 버리고 서버에서 다시 불러올까요?')){dirty=false;$('legal-dialog').close();void load();}};
   $('legal-close').onclick=()=>{if(!dirty||confirm('저장하지 않은 편집 내용을 버릴까요?')){$('legal-dialog').close();dirty=false;}};
   $('legal-dialog').addEventListener('cancel',event=>{if(busy||dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))event.preventDefault();else dirty=false;});
-  $('legal-new').onclick=()=>{const prev=active?.version;if(!active||busy||dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;status('');fill(null,prev);$('legal-version').focus();dirty=true;};
-  $('legal-versions').onchange=()=>{if(!active||busy)return;if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?')){$('legal-versions').value=active.version?.id??'';return;}const version=active.doc.versions.find(v=>v.id===$('legal-versions').value);if(version){status('');fill(version);}};
+  $('legal-new').onclick=()=>{const prev=active?.version;if(!active||busy||dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;status('');fill(null,prev);onDetail('legal',active.doc.key,'new');$('legal-version').focus();dirty=true;};
+  $('legal-versions').onchange=()=>{if(!active||busy)return;if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?')){$('legal-versions').value=active.version?.id??'';return;}const version=active.doc.versions.find(v=>v.id===$('legal-versions').value);if(version){status('');fill(version);onDetail('legal',active.doc.key,version.id);}};
   $('legal-form').oninput=event=>{dirty=true;if(['legal-version','legal-effective'].includes(event.target.id))syncFooter();};
   $('legal-form').onsubmit=event=>{event.preventDefault();void save(false);};$('legal-publish').onclick=()=>void save(true);
-  return {load,clear,hasUnsaved:()=>dirty};
+  $('legal-dialog').addEventListener('close',()=>{if(!$('legal-dialog').open){dirty=false;active=null;}});
+  return {load,clear,isBusy:()=>busy,closeDetail:()=>{$('legal-dialog').close();dirty=false;active=null;},openDetail:(id,version)=>{const doc=data?.documents.find(d=>d.key===id);if(!doc)return false;openDocument(doc,version,false);return active.version?.id??'new';},hasUnsaved:()=>dirty};
 }
