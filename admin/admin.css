@@ -434,3 +434,5 @@ h1{font-size:25px}
 #announcement-form .actions{position:static;left:auto;right:auto;bottom:auto;padding:14px 0 0;border-top:1px solid #e4e7eb;z-index:auto;flex-wrap:wrap}
 #announcement-form .checkbox-row{flex-direction:row;justify-content:flex-start}
 #announcement-form .checkbox-row input{margin:0}
+
+.legal-typography{border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}.legal-style-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.legal-selection-tools{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-top:20px}.legal-selection-tools label{flex:1;min-width:120px}.legal-preview{white-space:pre-wrap;overflow-wrap:anywhere;word-break:keep-all;color:#1a1a1a;background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px;max-height:420px;overflow:auto}.legal-preview-section{min-width:0}.legal-preview-section h3{margin:0 0 8px}#legal-style-save{background:var(--ink);border-color:var(--ink);color:white}#legal-form [hidden]{display:none}@media(max-width:500px){.legal-style-grid{grid-template-columns:1fr}.legal-preview{padding:16px}.legal-selection-tools button{width:100%}}

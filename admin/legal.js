@@ -1,9 +1,11 @@
+import {createLegalEditor, editPresentation} from './legal-editor.js';
 import {nextLegalVersion, withLegalFooter} from './legal-versioning.js';
 
 // Plain-text versioned documents. Published versions remain read-only.
 export function createLegalDocuments(getClient, onDetail = () => {}) {
   const $=id=>document.getElementById(id);
   let data=null, generation=0, busy=false, dirty=false, active=null;
+  const editor=createLegalEditor(()=>{dirty=true;});
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!=null)el.textContent=text;return el;};
   const status=(text,error=false)=>{$('legal-status').textContent=text;$('legal-status').className=error?'error':'';const inline=$('legal-dialog-status');if(inline){inline.textContent=text;inline.className=error?'error':'';}};
   function clear(){generation++;data=null;active=null;dirty=false;busy=false;$('legal-form').inert=false;$('legal-close').disabled=false;$('legal-new').disabled=false;$('legal-versions').disabled=false;$('legal-list').replaceChildren();$('legal-dialog').close();status('');}
@@ -31,7 +33,7 @@ export function createLegalDocuments(getClient, onDetail = () => {}) {
     const body=$('legal-body');
     const next=withLegalFooter(body.value,$('legal-version').value,$('legal-effective').value);
     const changed=next!==body.value;
-    if(changed)body.value=next;
+    if(changed){body.value=next;editor.sync();}
     if(!active.version){const option=$('legal-versions').querySelector('option[value=""]');if(option)option.textContent=`새 초안 · v${$('legal-version').value}`;}
     return changed;
   }
@@ -42,22 +44,27 @@ export function createLegalDocuments(getClient, onDetail = () => {}) {
     $('legal-effective').value=seed?.effectiveOn??'2026-10-05';$('legal-body').value=seed?.body??'';
     const versions=$('legal-versions');const draft=versions.querySelector('option[value=""]');
     if(version){draft?.remove();versions.value=version.id;}else{if(!draft){const option=node('option');option.value='';versions.prepend(option);}versions.value='';}
+    editor.load({...seed,body:$('legal-body').value,presentation:editPresentation(seed?.body??'',seed?.presentation,$('legal-body').value)});
     const locked=!!version?.publishedAt;
     if(!locked)dirty=syncFooter()||!version;
     for(const id of ['legal-version','legal-title','legal-effective','legal-body'])$(id).readOnly=locked;
+    $('legal-style-save').hidden=!locked;
     $('legal-save').disabled=locked;$('legal-publish').disabled=locked;
-    $('legal-dialog-hint').textContent=locked?'공개한 본문은 수정할 수 없습니다. ‘새 버전 초안’을 만들어 변경하세요.':'초안 저장 후 공개하면 앱에서 이 버전을 읽습니다. 필수 약관의 새 버전에는 다시 동의를 받습니다.';
+    $('legal-dialog-hint').textContent=locked?'공개한 본문은 수정할 수 없습니다. ‘새 버전 초안’을 만들어 변경하세요. 표시 설정은 본문·버전·동의 이력을 유지하며 즉시 저장할 수 있습니다.':'초안 저장 후 공개하면 앱에서 이 버전을 읽습니다. 필수 약관의 새 버전에는 다시 동의를 받습니다.';
   }
   async function load(){if(busy)return;busy=true;const gen=generation;status('약관을 불러오는 중…');try{const result=await request();if(gen!==generation)return;data=result;render();status('');return true;}catch(error){if(gen===generation)status(error.message,true);}finally{if(gen===generation)busy=false;}}
-  async function save(publish){
+  async function save(publish,styleOnly=false){
     if(busy||!active||!$('legal-form').reportValidity())return;
-    syncFooter();
+    if(!styleOnly)syncFooter();
+    let presentation;try{presentation=editor.value(!styleOnly);}catch(error){status(error.message,true);return;}
     if(publish&&!confirm('이 문서 버전을 앱에 공개할까요? 기존 공개 본문은 이력으로 보존되고, 필수 약관은 이용자에게 다시 동의를 요청합니다.'))return;
-    busy=true;const gen=generation;const key=active.doc.key;$('legal-form').inert=true;$('legal-close').disabled=true;$('legal-new').disabled=true;$('legal-versions').disabled=true;status('문서를 저장하는 중…');
-    try{const result=await request({action:publish?'publish':'save',key,revision:active.doc.revision,id:active.version?.id??null,version:$('legal-version').value.trim(),title:$('legal-title').value.trim(),effectiveOn:$('legal-effective').value,body:$('legal-body').value});
+    busy=true;const gen=generation;const key=active.doc.key;const selectedId=active.version?.id;$('legal-form').inert=true;$('legal-close').disabled=true;$('legal-new').disabled=true;$('legal-versions').disabled=true;status('문서를 저장하는 중…');
+    try{const result=await request(styleOnly?{
+      action:'style',key,id:active.version.id,presentationRevision:active.version.presentationRevision??0,presentation,
+    }:{action:publish?'publish':'save',key,revision:active.doc.revision,id:active.version?.id??null,version:$('legal-version').value.trim(),title:$('legal-title').value.trim(),effectiveOn:$('legal-effective').value,body:$('legal-body').value,presentation,presentationRevision:active.version?.presentationRevision??0});
       if(gen!==generation)return;data=result;dirty=false;render();
-      if(publish){$('legal-dialog').close();active=null;}else openDocument(data.documents.find(d=>d.key===key));
-      status(publish?'앱에 공개했습니다.':'초안을 저장했습니다. 앱에는 공개 전까지 반영되지 않습니다.');
+      if(publish){$('legal-dialog').close();active=null;}else openDocument(data.documents.find(d=>d.key===key),styleOnly?selectedId:null);
+      status(styleOnly?'표시 설정을 저장했습니다. 본문·버전·기존 동의는 유지됩니다.':publish?'앱에 공개했습니다.':'초안을 저장했습니다. 앱에는 공개 전까지 반영되지 않습니다.');
     }catch(error){if(gen===generation)status(error.message,true);}finally{if(gen===generation){busy=false;$('legal-form').inert=false;$('legal-close').disabled=false;$('legal-new').disabled=false;$('legal-versions').disabled=false;}}
   }
   $('legal-refresh').onclick=()=>{if(!dirty||confirm('편집 내용을 버리고 서버에서 다시 불러올까요?')){dirty=false;$('legal-dialog').close();void load();}};
@@ -66,7 +73,7 @@ export function createLegalDocuments(getClient, onDetail = () => {}) {
   $('legal-new').onclick=()=>{const prev=active?.version;if(!active||busy||dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;status('');fill(null,prev);onDetail('legal',active.doc.key,'new');$('legal-version').focus();dirty=true;};
   $('legal-versions').onchange=()=>{if(!active||busy)return;if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?')){$('legal-versions').value=active.version?.id??'';return;}const version=active.doc.versions.find(v=>v.id===$('legal-versions').value);if(version){status('');fill(version);onDetail('legal',active.doc.key,version.id);}};
   $('legal-form').oninput=event=>{dirty=true;if(['legal-version','legal-effective'].includes(event.target.id))syncFooter();};
-  $('legal-form').onsubmit=event=>{event.preventDefault();void save(false);};$('legal-publish').onclick=()=>void save(true);
+  $('legal-form').onsubmit=event=>{event.preventDefault();void save(false,!!active?.version?.publishedAt);};$('legal-publish').onclick=()=>void save(true);$('legal-style-save').onclick=()=>void save(false,true);
   $('legal-dialog').addEventListener('close',()=>{if(!$('legal-dialog').open){dirty=false;active=null;}});
   return {load,clear,isBusy:()=>busy,closeDetail:()=>{$('legal-dialog').close();dirty=false;active=null;},openDetail:(id,version)=>{const doc=data?.documents.find(d=>d.key===id);if(!doc)return false;openDocument(doc,version,false);return active.version?.id??'new';},hasUnsaved:()=>dirty};
 }
