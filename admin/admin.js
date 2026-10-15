@@ -7,9 +7,11 @@ import { createSupport } from './support.js';
 import { createMembers } from './members.js';
 import { createLegalDocuments } from './legal.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
+import { createCreditPolicy } from './credit-policy.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
 let contentLists;
+let creditPolicy;
 let promptStudio;
 let announcements;
 let members;
@@ -31,7 +33,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -52,6 +54,7 @@ document.addEventListener('keydown', e => {
 });
 const pageMeta = {
   dashboard: ['대시보드', '서비스의 사용과 성장을 한눈에 확인하세요.'],
+  credits: ['무료 대화권', '신규 지급과 매일 무료 충전의 기준 횟수를 설정하세요.'],
   products: ['상점 상품', '상품의 노출, 순서와 소개를 관리하세요.'],
   faqs: ['자주 묻는 질문', '사용자가 궁금해하는 질문과 답변을 관리하세요.'],
   notice: ['결제 안내', '상점 하단에 표시되는 결제 안내를 편집하세요.'],
@@ -66,8 +69,8 @@ const pageMeta = {
 const detailDialogs = { products:'item-dialog',faqs:'item-dialog',announcements:'announcement-dialog',push:'push-detail-dialog',legal:'legal-dialog',support:'support-detail-dialog',members:'member-detail-dialog' };
 const quietClose = new WeakSet();
 const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
-  if(busy||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
-  return !(contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
+  if(busy||creditPolicy?.isBusy()||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
+  return !(creditPolicy?.hasUnsaved()||contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
 }});
 function rememberDetail(tab,id,version=null){router.go({tab,id,version},{notify:false,check:false});}
 function closeRouteDialogs(){
@@ -100,6 +103,7 @@ async function applyRoute(route){
     else if(route.tab==='dashboard')await loadMetrics();
     else if(route.tab==='admins')await loadAdmins();
     else if(route.tab==='prompts')await promptStudio.load();
+    else if(route.tab==='credits')await creditPolicy.load();
     if(ticket!==routeTicket||!snapshot||adminRouteUrl(router.current)!==adminRouteUrl(route))return;
     if(!route.id)return;
     let result;
@@ -128,11 +132,11 @@ function selectTab(tab, options = {}) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
-  $('revision').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
+  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
+  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
+  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); if(!options.skipLoad)void loadMetrics(); }
   if (tab === 'legal' && !options.skipLoad) void legal.load();
   if (tab === 'support' && !options.skipLoad) void support.load();
@@ -140,7 +144,8 @@ function selectTab(tab, options = {}) {
   if (tab === 'admins' && !options.skipLoad) void loadAdmins();
   if (tab === 'prompts' && !options.skipLoad) void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
-  for (const name of ['dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support']) $(name).hidden = name !== tab;
+  if (tab === 'credits' && !options.skipLoad) void creditPolicy.load();
+  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -184,6 +189,7 @@ async function saveItemContent(content) {
   } finally { busy = false; $('editor').inert = false; }
 }
 contentLists = createContentLists({ getSnapshot: () => snapshot, onSave: saveItemContent, onStage: content => { snapshot.draft = content; markDirty(); }, onError: message => status(message,true),onDetail:rememberDetail });
+creditPolicy = createCreditPolicy(() => client);
 promptStudio = createPromptStudio(() => client);
 legal = createLegalDocuments(() => client,rememberDetail);
 $('form').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
@@ -199,8 +205,8 @@ $('preview').onclick = () => {
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
-window.addEventListener('beforeunload', (e) => { if (dirty || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
-$('logout').onclick = async () => { if (dirty && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
+window.addEventListener('beforeunload', (e) => { if (dirty || creditPolicy?.hasUnsaved() || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
+$('logout').onclick = async () => { if ((dirty || creditPolicy?.hasUnsaved()) && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
   try{sessionStorage.setItem(RETURN_ROUTE_KEY,adminRouteUrl(router.current));}catch{/* Same-window links still work when storage is blocked. */}

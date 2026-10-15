@@ -1,4 +1,4 @@
-export const ADMIN_TABS = ['dashboard', 'products', 'faqs', 'notice', 'prompts', 'announcements', 'push', 'legal', 'support', 'members', 'admins'];
+export const ADMIN_TABS = ['dashboard', 'credits', 'products', 'faqs', 'notice', 'prompts', 'announcements', 'push', 'legal', 'support', 'members', 'admins'];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const key = /^[a-z0-9._:-]{1,80}$/i;
 const detailTabs = new Set(['products', 'faqs', 'announcements', 'push', 'legal', 'support', 'members']);
