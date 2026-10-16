@@ -21,3 +21,5 @@ Menus use `/admin/push`, `/admin/members`, etc.; record details use `/admin/push
 Shared URLs open the exact view after login. OAuth continues to return to the existing allowlisted `/admin`; only a validated internal route is restored. Refresh, Back and Forward use the same router. Menu/detail query links have been retired. Vercel rewrites known menu paths to the admin shell without rewriting static assets.
 
 [Implementation and verification](../docs/admin-routing-20261012/README.md).
+
+Chat history (2026-10-16): `/admin/chats` lists recent user messages with KST period/kind/exact UID filters and cursor pagination. Clicking a message opens `/admin/chats/{userUuid}/{roomId}?message={id}` with bounded chronological context, older/newer loading and login return routing. Administrator-only read access; no export or chat mutation. [Verification and synthetic screenshots](../docs/admin-chat-history-20261016/README.md).

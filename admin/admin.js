@@ -4,6 +4,7 @@ import { createContentLists } from './content-list.js';
 import { createPromptStudio } from './prompt-studio.js';
 import { createAnnouncements } from './announcements.js';
 import { createSupport } from './support.js';
+import { createChatHistory } from './chat-history.js';
 import { createMembers } from './members.js';
 import { createLegalDocuments } from './legal.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
@@ -15,6 +16,7 @@ let creditPolicy;
 let promptStudio;
 let announcements;
 let members;
+let chatHistory;
 let legal;
 let support;
 let client, snapshot, dirty = false, busy = false, activeTab = readAdminRoute(location.href).tab, authGeneration = 0;
@@ -33,7 +35,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -63,10 +65,11 @@ const pageMeta = {
   push: ['푸시 알림', '발송 이력을 확인하고 새 알림을 보내세요.'],
   legal: ['약관·정책', '문서 내용, 공개 버전과 시행일을 관리하세요.'],
   support: ['문의·아이디어', '앱에서 접수된 문의와 아이디어, 첨부 사진을 확인하세요.'],
+  chats: ['채팅 기록', '최신 메시지와 채팅방의 대화 흐름을 확인하세요.'],
   members: ['회원', '회원 정보를 확인하고 푸시 발송 대상을 찾으세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
-const detailDialogs = { products:'item-dialog',faqs:'item-dialog',announcements:'announcement-dialog',push:'push-detail-dialog',legal:'legal-dialog',support:'support-detail-dialog',members:'member-detail-dialog' };
+const detailDialogs = { products:'item-dialog',faqs:'item-dialog',announcements:'announcement-dialog',push:'push-detail-dialog',legal:'legal-dialog',support:'support-detail-dialog',members:'member-detail-dialog',chats:'chat-dialog' };
 const quietClose = new WeakSet();
 const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
   if(busy||creditPolicy?.isBusy()||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
@@ -75,7 +78,7 @@ const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
 function rememberDetail(tab,id,version=null){router.go({tab,id,version},{notify:false,check:false});}
 function closeRouteDialogs(){
   for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);
-  contentLists?.closeDetail();announcements?.closeDetails();members?.closeDetail();support?.closeDetail();legal?.closeDetail();
+  contentLists?.closeDetail();announcements?.closeDetails();members?.closeDetail();chatHistory?.closeDetail();support?.closeDetail();legal?.closeDetail();
   if($('preview-dialog').open)$('preview-dialog').close();
 }
 for(const id of new Set(Object.values(detailDialogs))){
@@ -98,7 +101,7 @@ async function applyRoute(route){
   if(!snapshot)return;
   closeRouteDialogs();selectTab(route.tab,{skipLoad:true});
   try{
-    const module=route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
+    const module=route.tab==='chats'?chatHistory:route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
     if(module){const loaded=await module.load();if((module===announcements||module===legal)&&loaded!==true)return;}
     else if(route.tab==='dashboard')await loadMetrics();
     else if(route.tab==='admins')await loadAdmins();
@@ -107,7 +110,8 @@ async function applyRoute(route){
     if(ticket!==routeTicket||!snapshot||adminRouteUrl(router.current)!==adminRouteUrl(route))return;
     if(!route.id)return;
     let result;
-    if(['products','faqs'].includes(route.tab))result=contentLists.openDetail(route.tab,route.id);
+    if(route.tab==='chats')result=await chatHistory.openDetail(route);
+    else if(['products','faqs'].includes(route.tab))result=contentLists.openDetail(route.tab,route.id);
     else if(['announcements','push'].includes(route.tab))result=await announcements.openDetail(route.tab,route.id);
     else if(route.tab==='legal'){
       result=legal.openDetail(route.id,route.version);
@@ -132,20 +136,21 @@ function selectTab(tab, options = {}) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
-  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
+  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats'].includes(tab);
+  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support'].includes(tab);
+  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); if(!options.skipLoad)void loadMetrics(); }
   if (tab === 'legal' && !options.skipLoad) void legal.load();
   if (tab === 'support' && !options.skipLoad) void support.load();
+  if (tab === 'chats' && !options.skipLoad) void chatHistory.load();
   if (tab === 'members' && !options.skipLoad) void members.load();
   if (tab === 'admins' && !options.skipLoad) void loadAdmins();
   if (tab === 'prompts' && !options.skipLoad) void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
   if (tab === 'credits' && !options.skipLoad) void creditPolicy.load();
-  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support']) $(name).hidden = name !== tab;
+  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -370,6 +375,7 @@ try {
   const authEntryUrl=location.href;
   client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   announcements = createAnnouncements(() => client,rememberDetail);
+  chatHistory = createChatHistory(() => client,route=>router.go({tab:'chats',...route},{notify:false,check:false}));
   support = createSupport(() => client,{onDetail:rememberDetail});
   members = createMembers(() => client, ids => { router.go({tab:'push',id:null,version:null},{notify:false,check:false});selectTab('push',{skipLoad:true});void announcements.openForMembers(ids); },rememberDetail);
   const { data: { session }, error } = await client.auth.getSession();

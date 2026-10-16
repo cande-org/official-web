@@ -53,6 +53,10 @@
     {
       "source": "/admin/admins/:path*",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/chats/:path*",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [
