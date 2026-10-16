@@ -1,0 +1,2019 @@
+[
+  {
+    "width": 1440,
+    "view": "chats",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "chat-filters",
+        "controls": 7,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 2,
+        "beforeHeights": [
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "dashboard",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "metric-filters",
+        "controls": 5,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "products",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "faqs",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "announcements",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "push",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 1,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "support",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 4,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "members",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "admins",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "admin-add-row",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "admin-name-form",
+        "controls": 2,
+        "beforeHeights": [
+          40
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "prompts",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "prompt-rollback",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "member-detail-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "member-uid-copy",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "legal-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "legal-style-grid",
+        "controls": 4,
+        "beforeHeights": [
+          39.08,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "legal-selection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          36,
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "view": "push-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "push-schedule",
+        "controls": 2,
+        "beforeHeights": [
+          40.8,
+          42.59
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "push-filters",
+        "controls": 3,
+        "beforeHeights": [
+          39
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "chats",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "chat-filters",
+        "controls": 7,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 2,
+        "beforeHeights": [
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "dashboard",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "metric-filters",
+        "controls": 5,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "products",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "faqs",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "announcements",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "push",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 1,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "support",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 4,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "members",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "admins",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "admin-add-row",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "admin-name-form",
+        "controls": 2,
+        "beforeHeights": [
+          40
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "prompts",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "prompt-rollback",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "member-detail-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "member-uid-copy",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "legal-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "legal-style-grid",
+        "controls": 4,
+        "beforeHeights": [
+          39.08,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "legal-selection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          36,
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "view": "push-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "push-schedule",
+        "controls": 2,
+        "beforeHeights": [
+          40.8,
+          42.59
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "push-filters",
+        "controls": 3,
+        "beforeHeights": [
+          39
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "chats",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "chat-filters",
+        "controls": 7,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 2,
+        "beforeHeights": [
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "dashboard",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "metric-filters",
+        "controls": 5,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "products",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "faqs",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "announcements",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "push",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 1,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "support",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 4,
+        "beforeHeights": [
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "members",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          56.28
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "admins",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "admin-add-row",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "admin-name-form",
+        "controls": 2,
+        "beforeHeights": [
+          40
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "prompts",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "prompt-rollback",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "member-detail-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "member-uid-copy",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "legal-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "legal-style-grid",
+        "controls": 4,
+        "beforeHeights": [
+          39.08,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "legal-selection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          36,
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "view": "push-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "push-schedule",
+        "controls": 2,
+        "beforeHeights": [
+          40.8,
+          42.59
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "push-filters",
+        "controls": 3,
+        "beforeHeights": [
+          39
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "chats",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "chat-filters",
+        "controls": 7,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 2,
+        "beforeHeights": [
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "dashboard",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "metric-filters",
+        "controls": 5,
+        "beforeHeights": [
+          36,
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "products",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "faqs",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "announcements",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "push",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 1,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "support",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 4,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "members",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "admins",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "admin-add-row",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "admin-name-form",
+        "controls": 2,
+        "beforeHeights": [
+          40
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "prompts",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "prompt-rollback",
+        "controls": 2,
+        "beforeHeights": [
+          36,
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "member-detail-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "member-uid-copy",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "legal-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "legal-style-grid",
+        "controls": 4,
+        "beforeHeights": [
+          36,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "legal-selection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          36,
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 430,
+    "view": "push-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "push-schedule",
+        "controls": 2,
+        "beforeHeights": [
+          39,
+          42.59
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "push-filters",
+        "controls": 3,
+        "beforeHeights": [
+          39
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "chats",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "chat-filters",
+        "controls": 7,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 2,
+        "beforeHeights": [
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "dashboard",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "metric-filters",
+        "controls": 5,
+        "beforeHeights": [
+          36,
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "products",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "faqs",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "announcements",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "push",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 1,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "support",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 4,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "members",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "admins",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "admin-add-row",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "admin-name-form",
+        "controls": 2,
+        "beforeHeights": [
+          40
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "prompts",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "prompt-rollback",
+        "controls": 2,
+        "beforeHeights": [
+          36,
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "member-detail-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "member-uid-copy",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "legal-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "legal-style-grid",
+        "controls": 4,
+        "beforeHeights": [
+          36,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "legal-selection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          36,
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "view": "push-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "push-schedule",
+        "controls": 2,
+        "beforeHeights": [
+          39,
+          42.59
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "push-filters",
+        "controls": 3,
+        "beforeHeights": [
+          39
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "chats",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "chat-filters",
+        "controls": 7,
+        "beforeHeights": [
+          36,
+          36.14,
+          38.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 2,
+        "beforeHeights": [
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "dashboard",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "metric-filters",
+        "controls": 5,
+        "beforeHeights": [
+          36,
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "products",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "faqs",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "announcements",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 2,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "push",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 1,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "support",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 4,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "members",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "collection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "pagination",
+        "controls": 3,
+        "beforeHeights": [
+          32,
+          33.05
+        ],
+        "afterHeights": [
+          32
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "admins",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "admin-add-row",
+        "controls": 3,
+        "beforeHeights": [
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "admin-name-form",
+        "controls": 2,
+        "beforeHeights": [
+          40
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "prompts",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "prompt-rollback",
+        "controls": 2,
+        "beforeHeights": [
+          36,
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "member-detail-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "member-uid-copy",
+        "controls": 2,
+        "beforeHeights": [
+          36.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "legal-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "legal-style-grid",
+        "controls": 4,
+        "beforeHeights": [
+          36,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "legal-selection-tools",
+        "controls": 3,
+        "beforeHeights": [
+          36,
+          36.14,
+          42.14
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "view": "push-dialog",
+    "overflowAfter": false,
+    "groups": [
+      {
+        "group": "push-schedule",
+        "controls": 2,
+        "beforeHeights": [
+          39,
+          42.59
+        ],
+        "afterHeights": [
+          40
+        ]
+      },
+      {
+        "group": "push-filters",
+        "controls": 3,
+        "beforeHeights": [
+          39
+        ],
+        "afterHeights": [
+          40
+        ]
+      }
+    ]
+  }
+]
