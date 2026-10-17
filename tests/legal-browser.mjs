@@ -1,7 +1,8 @@
+import {pagedFixtureClient} from './pagination-fixture-client.mjs';
 // Real admin module, isolated API fixture; no production editing or messages.
 import fs from 'node:fs';import assert from 'node:assert/strict';import {build} from 'esbuild';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
-const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(build){build.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const createClient=()=>window.fakeClient;',loader:'js'}));}}]});
+const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(build){build.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export const createClient=()=>(${pagedFixtureClient.toString()})(window.fakeClient);`,loader:'js'}));}}]});
 const seed=JSON.parse(fs.readFileSync('../mental/server/supabase/content/initial.json','utf8'));
 const legal=JSON.parse(fs.readFileSync('../mental/server/supabase/seed/legal-documents-v1.json','utf8'));
 const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});

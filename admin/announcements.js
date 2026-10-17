@@ -1,3 +1,4 @@
+import {renderPager,setPagerBusy,clearPager} from './pagination.js';
 import { createAnnouncementEditor } from './announcement-editor.js';
 import { createPhotoEditor } from './push-photo.js';
 import { scheduledTime, clickMetrics, memberUids } from './push-controls.js';
@@ -14,7 +15,7 @@ const audienceLabel = audience => {
 
 export function createAnnouncements(client, onDetail = () => {}) {
   let data = { announcements: [], campaigns: [], pushReady: false };
-  const views = { announcements: { page: 1, size: 20, query: '', filter: 'all' }, push: { page: 1, size: 20, query: '' } };
+  const views = { announcements: { page: 1, size: 20, query: '', filter: 'all',remote:null,ticket:0 }, push: { page: 1, size: 20, query: '',filter:'all',remote:null,ticket:0 } };
   let current = null, busy = false, preview = null, previewTicket = 0, generation = 0;
   let currentPush = null, requestId = null, requestSignature = null;
   let photo = null, photoTicket = 0, photoPreparing = false, detailTicket = 0, announcementDirty = false, pushDirty = false;
@@ -45,17 +46,17 @@ export function createAnnouncements(client, onDetail = () => {}) {
   function pager(kind, count, pages) {
     const view = views[kind], prefix = kind === 'announcements' ? 'announcement' : 'push';
     $(`${prefix}-count`).textContent = count ? `${(view.page - 1) * view.size + 1}–${Math.min(view.page * view.size, count)} / ${count}개` : '0개';
-    $(`${prefix}-page`).textContent = `${view.page} / ${pages}`;
+    renderPager(prefix,{page:view.page,total:count,size:view.size,onChange:n=>{view.page=n;void loadList(kind);}});
     $(`${prefix}-prev`).disabled = view.page === 1;
     $(`${prefix}-next`).disabled = view.page === pages;
   }
   function renderAnnouncements() {
     const view = views.announcements, query = view.query.trim().toLocaleLowerCase('ko-KR');
-    const list = data.announcements.filter(item => (view.filter === 'all' || Boolean(item.published_at) === (view.filter === 'published')) && (!query || `${item.title} ${item.body}`.toLocaleLowerCase('ko-KR').includes(query)));
-    const pages = Math.max(1, Math.ceil(list.length / view.size)); view.page = Math.min(view.page, pages);
+    const list = view.remote!=null?data.announcements:data.announcements.filter(item => (view.filter === 'all' || Boolean(item.published_at) === (view.filter === 'published')) && (!query || `${item.title} ${item.body}`.toLocaleLowerCase('ko-KR').includes(query)));
+    const pages = Math.max(1, Math.ceil((view.remote??list.length) / view.size)); view.page = Math.min(view.page, pages);
     const { wrapper, body } = table(['제목', '상태', '생성일 (KST)', '수정일 (KST)', '수정자', '관리']);
     wrapper.setAttribute('aria-label', '공지사항 목록');
-    for (const item of list.slice((view.page - 1) * view.size, view.page * view.size)) {
+    for (const item of (view.remote!=null?list:list.slice((view.page - 1) * view.size, view.page * view.size))) {
       const row = el('tr');
       const name = el('td', null, 'name-cell');
       name.append(button(item.title, () => openAnnouncement(item), 'row-title'), el('p', item.body, 'row-summary')); row.append(name);
@@ -64,8 +65,8 @@ export function createAnnouncements(client, onDetail = () => {}) {
       const action = el('td', null, 'row-actions'); action.append(button('상세', () => openAnnouncement(item))); row.append(action);
       row.onclick = event => { if (!event.target.closest('button,a,input,select')) openAnnouncement(item); }; body.append(row);
     }
-    if (!list.length) { const row = el('tr'), empty = el('td', data.announcements.length ? '검색 조건에 맞는 공지사항이 없습니다.' : '등록된 공지사항이 없습니다. 새 공지를 추가해 주세요.', 'empty-list'); empty.colSpan = 6; row.append(empty); body.append(row); }
-    $('announcement-list').replaceChildren(wrapper); pager('announcements', list.length, pages);
+    if (!list.length) { const row = el('tr'), empty = el('td', (view.query||view.filter!=='all') ? '검색 조건에 맞는 공지사항이 없습니다.' : '등록된 공지사항이 없습니다. 새 공지를 추가해 주세요.', 'empty-list'); empty.colSpan = 6; row.append(empty); body.append(row); }
+    $('announcement-list').replaceChildren(wrapper); pager('announcements', view.remote??list.length, pages);
   }
   function openPushDetail(item, notify = true) {
     currentPush = item;
@@ -90,12 +91,12 @@ export function createAnnouncements(client, onDetail = () => {}) {
   }
   function renderPush() {
     const view = views.push, query = view.query.trim().toLocaleLowerCase('ko-KR');
-    const list = data.campaigns.filter(item => !query || `${item.title} ${item.body}`.toLocaleLowerCase('ko-KR').includes(query));
-    const pages = Math.max(1, Math.ceil(list.length / view.size)); view.page = Math.min(view.page, pages);
+    const list = view.remote!=null?data.campaigns:data.campaigns.filter(item => !query || `${item.title} ${item.body}`.toLocaleLowerCase('ko-KR').includes(query));
+    const pages = Math.max(1, Math.ceil((view.remote??list.length) / view.size)); view.page = Math.min(view.page, pages);
     $('push-readiness').textContent = data.pushReady ? '푸시 서버가 연결되어 있습니다.' : '푸시 서버 연결 전입니다. 이력은 조회할 수 있으며 새 알림 발송은 연결 후 가능합니다.';
     const { wrapper, body } = table(['제목', '본문', '대상', '첨부 사진', '발송 시각 (KST)', '성공 / 실패', '클릭률 · 클릭/대상', '상태', '관리']);
     wrapper.setAttribute('aria-label', '푸시 발송 이력');
-    for (const item of list.slice((view.page - 1) * view.size, view.page * view.size)) {
+    for (const item of (view.remote!=null?list:list.slice((view.page - 1) * view.size, view.page * view.size))) {
       const row = el('tr'), name = el('td', null, 'name-cell'); name.append(button(item.title, () => openPushDetail(item), 'row-title')); row.append(name);
       cell(row, item.body, 'push-body-cell'); cell(row, audienceLabel(item.audience), 'push-audience-cell');
       const imageCell = el('td');
@@ -107,13 +108,21 @@ export function createAnnouncements(client, onDetail = () => {}) {
       const action = el('td', null, 'row-actions'); action.append(button('상세', () => openPushDetail(item))); row.append(action);
       row.onclick = event => { if (!event.target.closest('button,a,input,select')) openPushDetail(item); }; body.append(row);
     }
-    if (!list.length) { const row = el('tr'), empty = el('td', data.campaigns.length ? '검색 조건에 맞는 발송 이력이 없습니다.' : '아직 발송 이력이 없습니다.', 'empty-list'); empty.colSpan = 9; row.append(empty); body.append(row); }
-    $('push-history').replaceChildren(wrapper); pager('push', list.length, pages);
+    if (!list.length) { const row = el('tr'), empty = el('td', view.query ? '검색 조건에 맞는 발송 이력이 없습니다.' : '아직 발송 이력이 없습니다.', 'empty-list'); empty.colSpan = 9; row.append(empty); body.append(row); }
+    $('push-history').replaceChildren(wrapper); pager('push', view.remote??list.length, pages);
   }
-  function render() { renderAnnouncements(); renderPush(); }
+  async function render() { return await Promise.all([loadList('announcements'),loadList('push')]); }
+  async function loadList(kind){
+    const view=views[kind],ticket=++view.ticket,gen=generation,prefix=kind==='push'?'push':'announcement';setPagerBusy(prefix);
+    try{const result=await request({action:'list',kind,page:view.page,size:view.size,query:view.query,filter:view.filter??'all'});
+      if(ticket!==view.ticket||gen!==generation)return;
+      view.remote=result.total;view.page=result.page;data[kind==='push'?'campaigns':'announcements']=result.items;
+      kind==='push'?renderPush():renderAnnouncements();state(kind,'');return true;
+    }catch(error){if(ticket===view.ticket&&gen===generation){$(kind==='push'?'push-history':'announcement-list').replaceChildren();clearPager(prefix);state(kind,error.message,true);}return false;}
+  }
   async function load() {
     const ticket = generation;
-    try { const result = await request(); if (ticket !== generation) return false; data = result; render(); state('announcements', ''); state('push', ''); return true; }
+    try { const result = await request(); if (ticket !== generation) return false; data = result; const loaded=await render();return loaded.every(Boolean); }
     catch (error) { if (ticket === generation) state($('push').hidden ? 'announcements' : 'push', error.message, true); return false; }
   }
   function openAnnouncement(item = null, notify = true) {
@@ -216,11 +225,11 @@ export function createAnnouncements(client, onDetail = () => {}) {
   $('announcement-form').onsubmit = saveAnnouncement;
   $('announcement-delete').onclick = removeAnnouncement;
   $('announcement-cancel').onclick = () => $('announcement-dialog').close();
-  $('announcement-search').oninput = event => { views.announcements.query = event.target.value; views.announcements.page = 1; renderAnnouncements(); };
-  $('announcement-filter').onchange = event => { views.announcements.filter = event.target.value; views.announcements.page = 1; renderAnnouncements(); };
-  $('announcement-size').onchange = event => { views.announcements.size = Number(event.target.value); views.announcements.page = 1; renderAnnouncements(); };
-  $('announcement-prev').onclick = () => { views.announcements.page--; renderAnnouncements(); };
-  $('announcement-next').onclick = () => { views.announcements.page++; renderAnnouncements(); };
+  $('announcement-search').oninput = event => { views.announcements.query = event.target.value; views.announcements.page = 1; void loadList('announcements'); };
+  $('announcement-filter').onchange = event => { views.announcements.filter = event.target.value; views.announcements.page = 1; void loadList('announcements'); };
+  $('announcement-size').onchange = event => { views.announcements.size = Number(event.target.value); views.announcements.page = 1; void loadList('announcements'); };
+  $('announcement-prev').onclick = () => { views.announcements.page--; void loadList('announcements'); };
+  $('announcement-next').onclick = () => { views.announcements.page++; void loadList('announcements'); };
   function resetPhoto() {
     photoTicket++; photoPreparing = false; photoEditor.clear();
     const old = photo; photo = null;
@@ -249,10 +258,10 @@ export function createAnnouncements(client, onDetail = () => {}) {
   $('push-dialog').addEventListener('close', resetPhoto);
   $('push-add').onclick = openPush;
   $('push-refresh').onclick = load;
-  $('push-search').oninput = event => { views.push.query = event.target.value; views.push.page = 1; renderPush(); };
-  $('push-size').onchange = event => { views.push.size = Number(event.target.value); views.push.page = 1; renderPush(); };
-  $('push-prev').onclick = () => { views.push.page--; renderPush(); };
-  $('push-next').onclick = () => { views.push.page++; renderPush(); };
+  $('push-search').oninput = event => { views.push.query = event.target.value; views.push.page = 1; void loadList('push'); };
+  $('push-size').onchange = event => { views.push.size = Number(event.target.value); views.push.page = 1; void loadList('push'); };
+  $('push-prev').onclick = () => { views.push.page--; void loadList('push'); };
+  $('push-next').onclick = () => { views.push.page++; void loadList('push'); };
   $('push-preview').onclick = previewAudience;
   $('push-timing').onchange = updateSchedule;
   $('push-cancel-reservation').onclick = cancelReservation;
@@ -272,5 +281,5 @@ export function createAnnouncements(client, onDetail = () => {}) {
     return true;
   }
   const closeDetails=()=>{detailTicket++;for(const id of ['announcement-dialog','push-dialog','push-detail-dialog'])if($(id).open)$(id).close();announcementDirty=false;pushDirty=false;current=null;currentPush=null;};
-  return { load, openDetail, closeDetails,isBusy:()=>busy||photoPreparing,hasUnsavedChanges:()=>announcementDirty||pushDirty, openForMembers: async ids => { if (!await load()) return; openPush(); $('push-user-ids').value = ids.join('\n'); invalidatePreview(); }, clear: () => { generation++; resetPhoto(); invalidatePreview(); for (const id of ['announcement-dialog', 'push-dialog', 'push-detail-dialog']) if ($(id).open) $(id).close(); data = { announcements: [], campaigns: [], pushReady: false }; $('announcement-list').replaceChildren(); $('push-history').replaceChildren(); } };
+  return { load, openDetail, closeDetails,isBusy:()=>busy||photoPreparing,hasUnsavedChanges:()=>announcementDirty||pushDirty, openForMembers: async ids => { if (!await load()) return; openPush(); $('push-user-ids').value = ids.join('\n'); invalidatePreview(); }, clear: () => { generation++; resetPhoto(); invalidatePreview(); for (const id of ['announcement-dialog', 'push-dialog', 'push-detail-dialog']) if ($(id).open) $(id).close(); data = { announcements: [], campaigns: [], pushReady: false };for(const kind of ['announcements','push']){views[kind].ticket++;views[kind].page=1;views[kind].remote=null;}clearPager('announcement');clearPager('push'); $('announcement-list').replaceChildren(); $('push-history').replaceChildren(); } };
 }

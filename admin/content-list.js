@@ -1,3 +1,4 @@
+import {renderPager} from './pagination.js';
 // Paginated collection views with isolated item edits. Only onSave persists data.
 export function createContentLists({ getSnapshot, onSave, onStage, onError, onDetail = () => {} }) {
   const $ = id => document.getElementById(id);
@@ -45,7 +46,7 @@ export function createContentLists({ getSnapshot, onSave, onStage, onError, onDe
     scroll.append(table);root.append(scroll);
     const pager=el('div',null,'pagination');const count=el('span',items.length?`${(view.page-1)*view.size+1}–${Math.min(view.page*view.size,items.length)} / ${items.length}개`:'0개','page-count');count.setAttribute('role','status');pager.append(count);
     const size=el('select');size.setAttribute('aria-label',`${kind==='products'?'상품':'FAQ'} 페이지당 항목 수`);for(const n of [5,10,20]){const o=el('option',`${n}개씩`);o.value=String(n);size.append(o);}size.value=String(view.size);size.onchange=()=>{view.size=Number(size.value);view.page=1;renderList(kind);};pager.append(size);
-    const prev=button('이전',()=>{view.page--;renderList(kind);}),next=button('다음',()=>{view.page++;renderList(kind);});prev.disabled=view.page===1;next.disabled=view.page===pages;pager.append(prev,el('span',`${view.page} / ${pages}`,'page-current'),next);root.append(pager);
+    const prev=button('이전',()=>{view.page--;renderList(kind);}),next=button('다음',()=>{view.page++;renderList(kind);});prev.disabled=view.page===1;next.disabled=view.page===pages;prev.id=(kind==='products'?'product':'faq')+'-prev';next.id=(kind==='products'?'product':'faq')+'-next';const host=el('span',null,'page-current');host.id=(kind==='products'?'product':'faq')+'-page';pager.append(prev,host,next);root.append(pager);renderPager(kind==='products'?'product':'faq',{page:view.page,total:items.length,size:view.size,onChange:n=>{view.page=n;renderList(kind);}});
   }
   function field(label,value,{name,type='text',maxLength,min,max}={}){
     const wrap=el('label',label),input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;else input.rows=type==='textarea'&&name==='answer'?7:3;

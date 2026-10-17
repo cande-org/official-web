@@ -1,9 +1,10 @@
+import {pagedFixtureClient} from './pagination-fixture-client.mjs';
 // Real admin rendering with isolated, delayed metrics; no production account/data.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
-const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(build){build.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const createClient=()=>window.fakeClient;',loader:'js'}));}}]});
+const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(build){build.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export const createClient=()=>(${pagedFixtureClient.toString()})(window.fakeClient);`,loader:'js'}));}}]});
 const seed=JSON.parse(fs.readFileSync('../mental/server/supabase/content/initial.json','utf8'));
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{})});
 try {

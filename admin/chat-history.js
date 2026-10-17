@@ -1,3 +1,4 @@
+import {renderPager,setPagerBusy,clearPager} from './pagination.js';
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
 const labels={user:'사용자',ai:'AI',safety:'안전 안내',failed:'전송 실패'};
@@ -39,17 +40,17 @@ export function createChatHistory(getClient,onDetail=()=>{}){
     }
     if(!data.messages.length){const row=node('tr'),cell=node('td','조건에 맞는 메시지가 없습니다.','empty-list');cell.colSpan=6;row.append(cell);body.append(row);}
     table.append(head,body);wrap.append(table);$('chat-list').replaceChildren(wrap);
-    $('chat-count').textContent=data.messages.length?`${offset+1}–${offset+data.messages.length}개`:'0개';$('chat-page').textContent=`${page+1}페이지`;
-    next=data.nextCursor??null;$('chat-prev').disabled=page===0;$('chat-next').disabled=!next;
+    $('chat-count').textContent=data.messages.length?`${offset+1}–${offset+data.messages.length} / ${data.total}개`:'0개';renderPager('chat',{page:page+1,total:data.total,size:filters.size,onChange:n=>{page=n-1;offset=page*filters.size;void load();}});
+    next=data.nextCursor??null;
   }
-  async function load(reset=false){
+  async function load(reset=false){setPagerBusy('chat');
     const ticket=++listTicket,gen=generation;
     try{
       if(reset||!filters){filters=readFilters();cursors=[null];page=0;offset=0;}
       status('메시지를 불러오는 중…');$('chat-refresh').disabled=true;$('chat-prev').disabled=true;$('chat-next').disabled=true;
-      const result=await request({action:'list',...filters,cursor:cursors[page]});
-      if(ticket!==listTicket||gen!==generation)return false;renderList(result);status('');return true;
-    }catch(error){if(ticket===listTicket&&gen===generation){$('chat-list').replaceChildren();$('chat-count').textContent='';$('chat-page').textContent='';next=null;$('chat-prev').disabled=true;$('chat-next').disabled=true;status(error.message,true);}return false;}
+      const result=await request({action:'list',...filters,page:page+1});
+      if(ticket!==listTicket||gen!==generation)return false;page=(result.page??(page+1))-1;offset=page*filters.size;renderList(result);status('');return true;
+    }catch(error){if(ticket===listTicket&&gen===generation){$('chat-list').replaceChildren();$('chat-count').textContent='';clearPager('chat');next=null;$('chat-prev').disabled=true;$('chat-next').disabled=true;status(error.message,true);}return false;}
     finally{if(ticket===listTicket&&gen===generation)$('chat-refresh').disabled=false;}
   }
   function renderRoom(highlight=null){

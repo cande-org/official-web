@@ -1,3 +1,4 @@
+import {renderPager,setPagerBusy,clearPager} from './pagination.js';
 const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
 const date=v=>new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
@@ -38,14 +39,15 @@ export function createSupport(getClient, { onDetail = () => {} } = {}){
   if(!data.requests.length){const row=el('tr'),cell=el('td','조건에 맞는 문의·아이디어가 없습니다.','empty-list');cell.colSpan=7;row.append(cell);body.append(row);}
   table.append(head,body);wrap.append(table);$('support-list').replaceChildren(wrap);
   const pages=Math.max(1,Math.ceil(data.total/view.size));$('support-count').textContent=`총 ${data.total}건`;
-  $('support-page').textContent=`${view.page} / ${pages}`;$('support-prev').disabled=view.page<=1;$('support-next').disabled=view.page>=pages;
+  renderPager('support',{page:view.page,total:data.total,size:view.size,onChange:n=>{view.page=n;void load();}});
  }
  async function load(){
+  setPagerBusy('support');
   const current=++ticket,session=generation;status('문의·아이디어를 불러오는 중…');$('support-refresh').disabled=true;
   try{const data=await request({action:'list',...view});if(current!==ticket||session!==generation)return;
    const last=Math.max(1,Math.ceil(data.total/view.size));if(view.page>last){view.page=last;return load();}
    render(data);status('');
-  }catch(e){if(current===ticket&&session===generation){$('support-list').replaceChildren();status(e.message,true);}}
+  }catch(e){if(current===ticket&&session===generation){$('support-list').replaceChildren();clearPager('support');status(e.message,true);}}
   finally{if(current===ticket&&session===generation)$('support-refresh').disabled=false;}
  }
  async function detail(id,notify=true){

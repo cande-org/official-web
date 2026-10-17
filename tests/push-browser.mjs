@@ -6,7 +6,7 @@ import { build } from 'esbuild';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const image='https://tzuxtejuscgyvgfmlijt.supabase.co/storage/v1/object/public/mental-push-images/a7a2bc52-c0db-44d3-8a7a-4a57a3e6aaac.jpg';
 const campaign={image_url:image,id:'a7a2bc52-c0db-44d3-8a7a-4a57a3e6aaac',title:'예약 안내',body:'본문도 표시합니다.',audience:{},icon_key:'bell',target_screen:'friends',status:'scheduled',scheduled_at:'2099-10-01T00:00:00Z',created_at:'2026-10-01T00:00:00Z',recipient_count:10,sent_count:4,failed_count:0,trackable_sent_count:2,opened_count:1};
-const bundle=await build({stdin:{contents:`import {createAnnouncements} from './admin/announcements.js'; window.mount=()=>createAnnouncements(()=>window.fakeClient);`,resolveDir:process.cwd()},bundle:true,write:false,format:'iife'});
+const bundle=await build({stdin:{contents:`import {createAnnouncements} from './admin/announcements.js'; import{pagedFixtureClient} from './tests/pagination-fixture-client.mjs';window.mount=()=>createAnnouncements(()=>pagedFixtureClient(window.fakeClient));`,resolveDir:process.cwd()},bundle:true,write:false,format:'iife'});
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{})});
 try {
  const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));

@@ -1,3 +1,4 @@
+import {pagedFixtureClient} from './pagination-fixture-client.mjs';
 // Exercise real admin modules and browser history, with synthetic data and zero production writes.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import {ADMIN_TABS} from '../admin/routing.js';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const seed=JSON.parse(fs.readFileSync('../mental/server/supabase/content/initial.json','utf8'));
 const legalSeed=JSON.parse(fs.readFileSync('../mental/server/supabase/seed/legal-documents-v1.json','utf8')).documents;
-const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(b){b.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export const createClient=()=>{if(new URL(location.href).searchParams.has('code'))history.replaceState({},'', '/admin');return window.fakeClient;};`,loader:'js'}));}}]});
+const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture-client',setup(b){b.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export const createClient=()=>{if(new URL(location.href).searchParams.has('code'))history.replaceState({},'', '/admin');return (${pagedFixtureClient.toString()})(window.fakeClient);};`,loader:'js'}));}}]});
 const origin='http://127.0.0.1:54321', id='00000000-0000-4000-8000-000000000001', old='00000000-0000-4000-8000-000000000002';
 const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 const errors=[];const shots=process.env.NOTICE_SHOTS; if(shots)fs.mkdirSync(shots,{recursive:true});

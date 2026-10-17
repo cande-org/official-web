@@ -1,3 +1,4 @@
+import {localPages} from './pagination.js';
 import {createLegalEditor, editPresentation} from './legal-editor.js';
 import {nextLegalVersion, withLegalFooter} from './legal-versioning.js';
 
@@ -11,13 +12,14 @@ export function createLegalDocuments(getClient, onDetail = () => {}) {
   function clear(){generation++;data=null;active=null;dirty=false;busy=false;$('legal-form').inert=false;$('legal-close').disabled=false;$('legal-new').disabled=false;$('legal-versions').disabled=false;$('legal-list').replaceChildren();$('legal-dialog').close();status('');}
   async function request(body){const {data,error}=await getClient().functions.invoke('admin-legal',{method:body?'POST':'GET',...(body?{body}:{})});if(error)throw Error(error.context?.status===409?'문서 버전이 충돌합니다. 새 버전 이름을 사용하거나 서버 내용을 다시 불러와 주세요.':'약관 요청에 실패했습니다. 관리자 권한과 연결을 확인해 주세요.');return data;}
   function render(){
-    $('legal-list').replaceChildren();
-    for(const doc of data.documents){
+    localPages($('legal-list'),data.documents,(target,documents)=>{
+    for(const doc of documents){
       const item=node('article');item.className='item';const info=node('div');
       const current=doc.versions.find(v=>v.id===doc.currentVersionId);
       info.append(node('h3',doc.label),node('p',current?`공개 v${current.version} · 시행 ${current.effectiveOn}`:'미공개'),node('p',doc.needsChoice?(doc.required?'필수 동의':'선택 동의'):'조회 문서'));
-      const open=node('button','버전 관리');open.type='button';open.onclick=()=>openDocument(doc);item.append(info,open);$('legal-list').append(item);
+      const open=node('button','버전 관리');open.type='button';open.onclick=()=>openDocument(doc);item.append(info,open);target.append(item);
     }
+    },{label:'약관·정책'});
   }
   function openDocument(doc, versionId=null, notify=true){
     if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;

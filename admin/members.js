@@ -1,3 +1,4 @@
+import {renderPager,setPagerBusy,clearPager} from './pagination.js';
 const $ = id => document.getElementById(id);
 const el = (tag, text, className) => { const node=document.createElement(tag);if(text!=null)node.textContent=text;if(className)node.className=className;return node; };
 const button = (text, handler, className) => { const node=el('button',text,className);node.type='button';node.onclick=handler;return node; };
@@ -35,15 +36,16 @@ export function createMembers(client, onPush, onDetail = () => {}) {
     table.append(head,body);wrapper.append(table);$('member-list').replaceChildren(wrapper);
     const pages=Math.max(1,Math.ceil(data.total/view.size));
     $('member-count').textContent=data.total?`${(view.page-1)*view.size+1}–${Math.min(view.page*view.size,data.total)} / ${data.total}명`:'0명';
-    $('member-page').textContent=`${view.page} / ${pages}`;$('member-prev').disabled=view.page===1;$('member-next').disabled=view.page>=pages;
+    renderPager('member',{page:view.page,total:data.total,size:view.size,onChange:n=>{view.page=n;void load();}});
   }
   async function load() {
+    setPagerBusy('member');
     const current=++ticket,session=generation;status('회원을 불러오는 중…');$('member-refresh').disabled=true;
     try {
       const data=await request({action:'list',...view});if(current!==ticket||session!==generation)return;
       const last=Math.max(1,Math.ceil(data.total/view.size));if(view.page>last){view.page=last;return load();}
       render(data);status('');
-    }catch(error){if(current===ticket&&session===generation){$('member-list').replaceChildren();status(error.message,true);}}
+    }catch(error){if(current===ticket&&session===generation){$('member-list').replaceChildren();clearPager('member');status(error.message,true);}}
     finally{if(current===ticket&&session===generation)$('member-refresh').disabled=false;}
   }
   async function open(id, notify = true) {

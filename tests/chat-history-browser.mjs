@@ -1,7 +1,8 @@
+import {pagedFixtureClient} from './pagination-fixture-client.mjs';
 import fs from 'node:fs';import assert from 'node:assert/strict';import {build} from 'esbuild';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const seed=JSON.parse(fs.readFileSync('../mental/server/supabase/content/initial.json','utf8'));
-const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture',setup(b){b.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:"export const createClient=()=>{if(location.search.includes('code='))history.replaceState({},'', '/admin');return window.fakeClient;};",loader:'js'}));}}]});
+const source=await build({entryPoints:['admin/admin.js'],bundle:true,write:false,format:'esm',plugins:[{name:'fixture',setup(b){b.onResolve({filter:/^@supabase\/supabase-js$/},()=>({path:'client',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export const createClient=()=>{if(location.search.includes('code='))history.replaceState({},'', '/admin');return (${pagedFixtureClient.toString()})(window.fakeClient);};`,loader:'js'}));}}]});
 const origin='http://127.0.0.1:54321',user='00000000-0000-4000-8000-000000000001';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 try{
@@ -23,7 +24,7 @@ try{
     if(b.action==='room'){if(window.deferRoom)return new Promise(resolve=>window.resolveRoom=()=>resolve(window.roomResult(b)));return window.roomResult(b);}
     let all=window.messages.filter(m=>(b.kind==='all'||m.sender_kind===b.kind)&&(!b.userId||m.user_id===b.userId)&&m.sent_at>=b.from&&m.sent_at<b.until).sort((a,b)=>b.sent_at.localeCompare(a.sent_at)||b.id.localeCompare(a.id));
     if(b.cursor)all=all.filter(m=>m.sent_at<b.cursor.sentAt||m.sent_at===b.cursor.sentAt&&m.id<b.cursor.id);
-    const rows=all.slice(0,b.size).map(m=>({...m,preview:m.content.slice(0,160)}));return{data:{messages:rows,nextCursor:all.length>b.size?cursor(rows.at(-1)):null}};
+    const total=all.length;all=all.slice((b.page-1)*b.size);const rows=all.slice(0,b.size).map(m=>({...m,preview:m.content.slice(0,160)}));return{data:{messages:rows,total,page:b.page,pages:Math.max(1,Math.ceil(total/b.size)),nextCursor:all.length>b.size?cursor(rows.at(-1)):null}};
    }}};
   },{seed,user,loggedOut});
   await page.goto(origin+path);await page.locator(loggedOut?'#login':'#editor').waitFor({state:'visible'});return {page,errors};
@@ -31,7 +32,7 @@ try{
  const {page,errors}=await boot('/admin/chats');
  await page.locator('#chat-start').fill('2026-10-10');await page.locator('#chat-end').fill('2026-10-16');await page.locator('#chat-search-form button[type=submit]').click();await page.locator('#chat-list tbody tr').first().waitFor();
  assert.equal(await page.locator('#chat-list tbody tr').count(),20);assert((await page.locator('#chat-list tbody tr').first().innerText()).includes('사용자'));
- const first=await page.locator('#chat-list .row-title').first().innerText();await page.locator('#chat-next').click();await page.waitForFunction(()=>document.querySelector('#chat-page').textContent==='2페이지');assert.notEqual(await page.locator('#chat-list .row-title').first().innerText(),first);await page.locator('#chat-prev').click();await page.waitForFunction(()=>document.querySelector('#chat-page').textContent==='1페이지');assert.equal(await page.locator('#chat-list .row-title').first().innerText(),first);
+ const first=await page.locator('#chat-list .row-title').first().innerText();await page.locator('#chat-next').click();await page.waitForFunction(()=>document.querySelector('#chat-page').dataset.page==='2');assert.notEqual(await page.locator('#chat-list .row-title').first().innerText(),first);await page.locator('#chat-prev').click();await page.waitForFunction(()=>document.querySelector('#chat-page').dataset.page==='1');assert.equal(await page.locator('#chat-list .row-title').first().innerText(),first);
  await page.locator('#chat-kind').selectOption('all');await page.locator('#chat-search-form button[type=submit]').click();await page.waitForFunction(()=>window.calls.at(-1)?.kind==='all');
  await page.locator('#chat-user').fill('invalid');await page.locator('#chat-search-form button[type=submit]').click();await page.locator('#chat-status').getByText('회원 UID는 전체 UUID를 입력해 주세요.').waitFor();
  await page.locator('#chat-user').fill(user);await page.locator('#chat-search-form button[type=submit]').click();await page.locator('#chat-list .row-title').first().waitFor();

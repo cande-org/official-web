@@ -1,3 +1,4 @@
+import {localPages,renderPager,setPagerBusy,clearPager} from './pagination.js';
 import { createAdminRouter, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from './routing.js';
 import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
 import { createContentLists } from './content-list.js';
@@ -227,13 +228,13 @@ $('signin').onclick = async () => {
   if (error) status('로그인을 시작하지 못했습니다.', true);
 };
 
-let adminsBusy = false;
-function clearAdmins() {
+let adminsBusy = false,adminHistoryPage=1,adminHistoryTicket=0;
+function clearAdmins() {adminHistoryTicket++;adminHistoryPage=1;
   $('admin-list').replaceChildren(); $('admin-history').replaceChildren(); $('admin-email').value = ''; $('admin-name').value = ''; $('admin-status').textContent = '';
 }
 function renderAdmins(data) {
-  $('admin-list').replaceChildren();
-  for (const admin of data.admins) {
+  localPages($('admin-list'),data.admins,(target,admins)=>{
+  for (const admin of admins) {
     const box = node('article', null, 'item admin-item'), info = node('div');
     const self = admin.email === data.currentEmail;
     info.append(node('strong', admin.email), node('p', `${admin.enabled ? '허용됨' : '해제됨'}${self ? ' · 현재 로그인 계정' : ''}`));
@@ -246,10 +247,21 @@ function renderAdmins(data) {
     nameInput.value=admin.name??'';nameInput.maxLength=80;nameInput.setAttribute('aria-label',`${admin.email} 이름`);nameInput.placeholder='이름 입력';nameLabel.append(nameInput);
     const nameSave=node('button','이름 저장');nameSave.type='submit';nameSave.setAttribute('aria-label',`${admin.email} 이름 저장`);
     nameForm.append(nameLabel,nameSave);nameForm.onsubmit=e=>{e.preventDefault();void loadAdmins({action:'set_name',email:admin.email,name:nameInput.value.trim()});};
-    box.append(info, nameForm, button); $('admin-list').append(box);
+    box.append(info, nameForm, button); target.append(box);
   }
+  },{label:'관리자'});
   const labels = { add: '추가', enable: '다시 허용', disable: '권한 해제', bootstrap: '최초 등록', set_name: '이름 변경' };
-  $('admin-history').replaceChildren(data.history.length ? metricTable(['시각 (KST)', '실행 관리자', '대상', '변경'], data.history.map(h => [new Date(h.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }), h.actor_name ?? '', h.target_email, labels[h.action] ?? h.action])) : node('p', '변경 이력이 없습니다.'));
+  void loadAdminHistory();
+}
+async function loadAdminHistory(){
+ const ticket=++adminHistoryTicket,generation=authGeneration;const root=$('admin-history');
+ try{const {data,error}=await client.functions.invoke('admin-access',{method:'POST',body:{action:'history',page:adminHistoryPage}});
+  if(ticket!==adminHistoryTicket||generation!==authGeneration)return;if(error)throw Error('관리자 변경 이력을 불러오지 못했습니다.');adminHistoryPage=data.page;
+  const labels={add:'추가',enable:'다시 허용',disable:'권한 해제',bootstrap:'최초 등록',set_name:'이름 변경'};
+  root.replaceChildren(metricTable(['시각 (KST)','실행 관리자','대상','변경'],data.items.map(h=>[new Date(h.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),h.actor_name??'',h.target_email,labels[h.action]??h.action]),false));
+  const pager=node('div',null,'pagination'),count=node('span',`총 ${data.total}개`,'page-count'),prev=action('이전',()=>{}),host=node('span'),next=action('다음',()=>{});prev.id='admin-history-prev';host.id='admin-history-page';next.id='admin-history-next';pager.append(count,prev,host,next);root.append(pager);
+  renderPager('admin-history',{page:adminHistoryPage,total:data.total,size:20,onChange:n=>{adminHistoryPage=n;setPagerBusy('admin-history');void loadAdminHistory();}});
+ }catch(error){if(ticket===adminHistoryTicket&&generation===authGeneration)root.replaceChildren(node('p',error.message));}
 }
 async function loadAdmins(body) {
   if (!client || adminsBusy) return;
@@ -294,10 +306,10 @@ function metricCards(target, title, items, note) {
   const cards=node('div',null,'metric-cards');
   for(const [label,value,detail] of items){const card=node('article',null,'metric-card');card.append(node('span',label),node('strong',value));if(detail)card.append(node('small',detail));cards.append(card);}section.append(cards);
 }
-function metricTable(headers, rows) {
+function metricTable(headers, rows, paginate=true) {
   const table=node('table'),head=node('thead'),tr=node('tr'),body=node('tbody');
   for(const label of headers){const th=node('th',label);th.scope='col';tr.append(th);}head.append(tr);table.append(head);
-  for(const values of rows){const row=node('tr');for(const value of values)row.append(node('td',value));body.append(row);}table.append(body);return table;
+  table.append(body);if(!paginate){for(const values of rows){const row=node('tr');for(const value of values)row.append(node('td',value));body.append(row);}return table;}const paged=node('div',null,'metric-table-paged');localPages(paged,rows,(target,values)=>{target.className='table-scroll';body.replaceChildren();for(const valuesRow of values){const row=node('tr');for(const value of valuesRow)row.append(node('td',value));body.append(row);}target.append(table);},{label:'상세 내역'});return paged;
 }
 function renderGrowth(data) {
   if(![2,3].includes(data.schemaVersion)){clearMetrics();throw Error('확장 지표를 준비 중입니다. 잠시 후 다시 조회해 주세요.');}
@@ -316,7 +328,7 @@ function renderGrowth(data) {
     [`${cohort} → 첫 채팅`,ratio(c.chatConverted7d,c.eligible7d)],
     [`${cohort} → 실제 구매`,ratio(c.purchaseConverted7d,c.eligible7d)],
     ...(!member ? [['게스트 시작 → 회원가입',ratio(g.guestConverted7d,g.guestEligible7d)]] : [])
-  ]));conversion.append(wrap,node('p',c.medianFirstChatSeconds==null?'첫 채팅까지 중앙시간: — 관찰 대상 없음':`첫 채팅까지 중앙시간: ${(c.medianFirstChatSeconds/60).toLocaleString('ko-KR',{maximumFractionDigits:1})}분 · 7일 내 전환한 ${people} 기준`));
+  ],false));conversion.append(wrap,node('p',c.medianFirstChatSeconds==null?'첫 채팅까지 중앙시간: — 관찰 대상 없음':`첫 채팅까지 중앙시간: ${(c.medianFirstChatSeconds/60).toLocaleString('ko-KR',{maximumFractionDigits:1})}분 · 7일 내 전환한 ${people} 기준`));
   metricCards('growth-retention',`${guest?'게스트 시작':'가입'} 코호트 리텐션`,['d1','d7','d30'].map(key=>[key.toUpperCase(),c[key].eligible ? (100*c[key].retained/c[key].eligible).toFixed(1)+'%' : '—',c[key].eligible ? `${number(c[key].retained)} / ${number(c[key].eligible)}명 · 해당 날짜 관찰 완료` : '관찰 대기 또는 가입 대상 없음']),`${guest?'게스트를 시작':'가입'}한 날을 D0으로 보고 정확히 1·7·30일 뒤 ${guest?'비로그인':member?'로그인':'전체'} 상태로 서버 활동을 한 비율입니다. 끝나지 않은 날짜는 분모에서 제외합니다.`);
   const retention=node('div',null,'table-scroll');retention.tabIndex=0;retention.setAttribute('aria-label',`${guest?'게스트 시작':'가입'} 코호트별 리텐션`);
   if(data.cohorts.buckets.length)retention.append(metricTable([guest?'게스트 시작 기간':'가입 기간',guest?'게스트':'가입','D1','D7','D30','7일 채팅','7일 구매','7일 관찰 대기'],data.cohorts.buckets.map(b=>[b.date,number(b.members),ratio(b.d1.retained,b.d1.eligible),ratio(b.d7.retained,b.d7.eligible),ratio(b.d30.retained,b.d30.eligible),ratio(b.chatConverted7d,b.eligible7d),ratio(b.purchaseConverted7d,b.eligible7d),number(b.pending7d)])));
@@ -366,8 +378,7 @@ async function loadMetrics() {
     renderTrend(rows, audience);
     if (!rows.some(b => (audience==='guest'?b.guests:b.members) > 0)) $('metric-chart').append(node('p',`선택 기간에 ${audience==='guest'?'새 게스트 시작':'신규 가입'}이 없습니다.`,'chart-note'));
     const columns = [['date','기간 시작'],['activeUsers','활성 유저'],['returningUsers','재방문 유저'],['purchases','구매 건'],['buyers','구매 유저'],['adViews','광고 완료'],['adViewers','광고 유저'],['members','가입'],['guests','게스트 시작'],['rooms','생성 방'],['roomUsers','방 생성 유저'],['chatUsers','채팅 유저'],['memberChatUsers','회원 채팅 유저'],['guestChatUsers','게스트 채팅 유저'],['turns','전송'],['succeeded','응답 성공'],['failed','실패']];
-    const table=node('table'),head=node('thead'),tr=node('tr');for(const [,label] of columns)tr.append(node('th',label));head.append(tr);table.append(head);const body=node('tbody');
-    for(const b of rows){const row=node('tr');for(const [key] of columns)row.append(node('td',key==='date'?b[key]:Number(b[key]).toLocaleString('ko-KR')));body.append(row);}table.append(body);$('metric-table').replaceChildren(table);
+    $('metric-table').replaceChildren(metricTable(columns.map(([,label])=>label),rows.map(b=>columns.map(([key])=>key==='date'?b[key]:Number(b[key]).toLocaleString('ko-KR')))));
     const time = value => value ? new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}) : '아직 처리 전';
     $('metric-status').textContent = `${audience==='member'?'로그인':audience==='guest'?'비로그인':'전체'} 이용자 · 최근 집계 ${time(data.lastProcessedAt)} · 수집 시작 ${time(data.trackingStartedAt)} · 전체 운영 현황: 집계 대기 ${data.pendingEvents}건 · 알림 대기 ${data.pendingNotifications}건 / 실패 ${data.failedNotifications}건`;
   } catch(error) { if(generation===authGeneration && ticket===metricsRequest){$('metric-status').textContent=error.message;clearMetrics();} }
