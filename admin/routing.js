@@ -1,4 +1,4 @@
-export const ADMIN_TABS = ['dashboard', 'credits', 'products', 'faqs', 'notice', 'prompts', 'announcements', 'push', 'legal', 'support', 'members', 'chats', 'admins'];
+export const ADMIN_TABS = ['dashboard', 'credits', 'products', 'faqs', 'notice', 'prompts', 'announcements', 'push', 'legal', 'support', 'members', 'chats', 'payments', 'ads', 'friends', 'admins'];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const key = /^[a-z0-9._:-]{1,80}$/i;
 const detailTabs = new Set(['products', 'faqs', 'announcements', 'push', 'legal', 'support', 'members']);
@@ -9,12 +9,13 @@ export function readAdminRoute(value) {
   try { segments = url.pathname.replace(/\/$/, '').split('/').filter(Boolean).map(decodeURIComponent); } catch { segments = []; }
   const pathTab = segments[0] === 'admin' && ADMIN_TABS.includes(segments[1]) ? segments[1] : null;
   const tab = pathTab ?? 'dashboard';
-  if(tab==='chats'){
-    const validId=v=>typeof v==='string'&&v.length>0&&v.length<=128&&!/[\u0000-\u001f\u007f]/.test(v);
+  if(['payments','ads'].includes(tab)){const value=segments[2];const id=segments.length===3&&typeof value==='string'&&value.length>0&&value.length<=512&&!/[\u0000-\u001f\u007f]/.test(value)&&!['.','..'].includes(value)?value:null;return{tab,id,version:null};}
+  if(tab==='chats'||tab==='friends'){
+    const validId=v=>typeof v==='string'&&v.length>0&&v.length<=(tab==='friends'?160:128)&&!/[\u0000-\u001f\u007f]/.test(v);
     const user=segments.length===4&&uuid.test(segments[2])?segments[2]:null;
     const id=user&&validId(segments[3])?segments[3]:null;
     const message=url.searchParams.get('message');
-    return {tab,id,version:null,user:id?user:null,message:id&&validId(message)?message:null};
+    return {tab,id,version:null,user:id?user:null,...(tab==='chats'?{message:id&&validId(message)?message:null}:{})};
   }
   let id = pathTab && segments.length === 3 ? segments[2] : null;
   if (!detailTabs.has(tab) || !(id === 'new' && ['faqs', 'announcements', 'push'].includes(tab) || (['products', 'faqs', 'legal'].includes(tab) ? key : uuid).test(id ?? ''))) id = null;
@@ -23,7 +24,7 @@ export function readAdminRoute(value) {
   return { tab, id, version };
 }
 export function adminRouteUrl(route) {
-  if(route.tab==='chats'){const path=`/admin/chats${route.user&&route.id?`/${encodeURIComponent(route.user)}/${encodeURIComponent(route.id)}`:''}`;return route.message&&route.id?`${path}?${new URLSearchParams({message:route.message})}`:path;}
+  if(route.tab==='chats'||route.tab==='friends'){const path=`/admin/${route.tab}${route.user&&route.id?`/${encodeURIComponent(route.user)}/${encodeURIComponent(route.id)}`:''}`;return route.tab==='chats'&&route.message&&route.id?`${path}?${new URLSearchParams({message:route.message})}`:path;}
   const path = `/admin/${encodeURIComponent(route.tab)}${route.id ? `/${encodeURIComponent(route.id)}` : ''}`;
   return route.version ? `${path}?${new URLSearchParams({version: route.version})}` : path;
 }

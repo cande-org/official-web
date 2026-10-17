@@ -57,6 +57,18 @@
     {
       "source": "/admin/chats/:path*",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/payments/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/ads/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/friends/:path*",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [

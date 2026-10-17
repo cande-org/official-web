@@ -23,3 +23,5 @@ Shared URLs open the exact view after login. OAuth continues to return to the ex
 [Implementation and verification](../docs/admin-routing-20261012/README.md).
 
 Chat history (2026-10-16): `/admin/chats` lists recent user messages with KST period/kind/exact UID filters and cursor pagination. Clicking a message opens `/admin/chats/{userUuid}/{roomId}?message={id}` with bounded chronological context, older/newer loading and login return routing. Administrator-only read access; no export or chat mutation. [Verification and synthetic screenshots](../docs/admin-chat-history-20261016/README.md).
+
+Operational records (2026-10-17): separate `/admin/payments`, `/admin/ads`, `/admin/friends` tables and shareable details. Payments/ads support bounded KST periods and all menus support exact UID/cursor paging. Ads represent verified rewarded completions; unproven payment environments and missing credit ledgers remain explicit. Friend photos use owner-checked private signed URLs with refresh/fallback. [Contract and synthetic screenshots](../docs/admin-operations-20261017/README.md).
