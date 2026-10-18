@@ -8,4 +8,11 @@
 
 `npm run check`, 웹 단위 테스트24개, 빌드가 통과했다. `tests/chat-knowledge-browser.mjs`는 실제 브라우저·실제 편집 모듈과 합성 API를 사용해 CRUD, 비활성화, 수정 충돌 시 입력 보존, 페이지 이동, XSS, 권한 실패, 360/390/430px을 검증한다. `tests/routing-browser.mjs`로 기존 로그인/라우팅/뒤로 가기/미저장 보호를 회귀 검증했다. 테스트 Chrome은 finally에서 종료하며 별도 dev 서버는 사용하지 않는다. [합성 화면](screenshots/).
 
-배포 대상은 CANDE/cande6, 프로젝트 `prj_Lwe2BZU8bzRf2CsxPLEAM68sduUs`, 공식 `cande-org/official-web`의 main이다. 기존 Cande Vercel 로그인에서 계정·팀·프로젝트·Git 연결·빌드 설정을 재확인했다. 프로덕션 배포와 인증된 운영 확인 결과는 아래에 기록한다.
+배포 대상은 CANDE/cande6, 프로젝트 `prj_Lwe2BZU8bzRf2CsxPLEAM68sduUs`, 공식 `cande-org/official-web`의 main이다. 기존 Cande Vercel 로그인에서 계정·팀·프로젝트·Git 연결·빌드 설정을 재확인했다. 소스 `ca7c7ef`의 프로덕션 배포 `dpl_CtDPUP8vEN7Je4JVCLsvqfNxRjdJ`가 READY이며 `/admin/knowledge` HTTP200을 확인했다. 실제 관리자 세션에서12개 목록과 Hearts2Hearts 항목 편집창, 저장/삭제 버튼 활성 상태를 확인했으며 운영 내용은 변경하지 않았다. Aside 검증 탭을 종료했다.
+
+- URL: https://cande.fyi/admin/knowledge
+- Target / Status: production / READY
+- Framework: 없음, 정적 파일+esbuild
+- Commit: ca7c7effe52884dafd8c23a9e05daa12533a28ab
+- Build duration: 이번 검증에서 미조회
+- Observability: 합성 브라우저 오류0, 인증된 목록/편집창 확인. Vercel 런타임 오류 로그/드레인 설정은 이번 작업에서 별도 조회하지 않았다.
