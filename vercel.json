@@ -69,6 +69,10 @@
     {
       "source": "/admin/friends/:path*",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/knowledge/:path*",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [

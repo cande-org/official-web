@@ -1,3 +1,4 @@
+import { createChatKnowledge } from './chat-knowledge.js';
 import {localPages,renderPager,setPagerBusy,clearPager} from './pagination.js';
 import { createAdminRouter, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from './routing.js';
 import { ADMIN_AUTH_KEY, prepareAuthStorage } from './auth-storage.js';
@@ -15,6 +16,7 @@ import { createClient } from '@supabase/supabase-js';
 const $ = (id) => document.getElementById(id);
 let contentLists;
 let creditPolicy;
+let chatKnowledge;
 let promptStudio;
 let announcements;
 let members;
@@ -39,7 +41,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -60,6 +62,7 @@ document.addEventListener('keydown', e => {
 });
 const pageMeta = {
   dashboard: ['대시보드', '서비스의 사용과 성장을 한눈에 확인하세요.'],
+  knowledge: ['인물·줄임말 사전', '아이돌 이름, 별칭과 대화 참고 정보를 관리하세요.'],
   credits: ['무료 대화권', '신규 지급과 매일 무료 충전의 기준 횟수를 설정하세요.'],
   products: ['상점 상품', '상품의 노출, 순서와 소개를 관리하세요.'],
   faqs: ['자주 묻는 질문', '사용자가 궁금해하는 질문과 답변을 관리하세요.'],
@@ -76,16 +79,16 @@ const pageMeta = {
   members: ['회원', '회원 정보를 확인하고 푸시 발송 대상을 찾으세요.'],
   admins: ['관리자', '운영 콘솔의 접근 권한과 변경 이력을 관리하세요.']
 };
-const detailDialogs = { products:'item-dialog',faqs:'item-dialog',announcements:'announcement-dialog',push:'push-detail-dialog',legal:'legal-dialog',support:'support-detail-dialog',members:'member-detail-dialog',chats:'chat-dialog',payments:'operation-dialog',ads:'operation-dialog',friends:'operation-dialog' };
+const detailDialogs = { knowledge:'knowledge-dialog',products:'item-dialog',faqs:'item-dialog',announcements:'announcement-dialog',push:'push-detail-dialog',legal:'legal-dialog',support:'support-detail-dialog',members:'member-detail-dialog',chats:'chat-dialog',payments:'operation-dialog',ads:'operation-dialog',friends:'operation-dialog' };
 const quietClose = new WeakSet();
 const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
-  if(busy||creditPolicy?.isBusy()||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
-  return !(creditPolicy?.hasUnsaved()||contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
+  if(busy||chatKnowledge?.isBusy()||creditPolicy?.isBusy()||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
+  return !(chatKnowledge?.hasUnsaved()||creditPolicy?.hasUnsaved()||contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
 }});
 function rememberDetail(tab,id,version=null){router.go({tab,id,version},{notify:false,check:false});}
 function closeRouteDialogs(){
   for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);
-  contentLists?.closeDetail();announcements?.closeDetails();members?.closeDetail();chatHistory?.closeDetail();operations?.closeDetail();support?.closeDetail();legal?.closeDetail();
+  chatKnowledge?.closeDetail();contentLists?.closeDetail();announcements?.closeDetails();members?.closeDetail();chatHistory?.closeDetail();operations?.closeDetail();support?.closeDetail();legal?.closeDetail();
   if($('preview-dialog').open)$('preview-dialog').close();
 }
 for(const id of new Set(Object.values(detailDialogs))){
@@ -108,7 +111,7 @@ async function applyRoute(route){
   if(!snapshot)return;
   closeRouteDialogs();selectTab(route.tab,{skipLoad:true});
   try{
-    const module=isOperationTab(route.tab)?operations.view(route.tab):route.tab==='chats'?chatHistory:route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
+    const module=route.tab==='knowledge'?chatKnowledge:isOperationTab(route.tab)?operations.view(route.tab):route.tab==='chats'?chatHistory:route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
     if(module){const loaded=await module.load();if((module===announcements||module===legal)&&loaded!==true)return;}
     else if(route.tab==='dashboard')await loadMetrics();
     else if(route.tab==='admins')await loadAdmins();
@@ -144,11 +147,11 @@ function selectTab(tab, options = {}) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends'].includes(tab);
-  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends'].includes(tab);
+  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge'].includes(tab);
+  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends'].includes(tab);
+  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); if(!options.skipLoad)void loadMetrics(); }
   if (tab === 'legal' && !options.skipLoad) void legal.load();
   if (tab === 'support' && !options.skipLoad) void support.load();
@@ -158,8 +161,9 @@ function selectTab(tab, options = {}) {
   if (tab === 'admins' && !options.skipLoad) void loadAdmins();
   if (tab === 'prompts' && !options.skipLoad) void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
+  if (tab === 'knowledge' && !options.skipLoad) void chatKnowledge.load();
   if (tab === 'credits' && !options.skipLoad) void creditPolicy.load();
-  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends']) $(name).hidden = name !== tab;
+  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -203,6 +207,7 @@ async function saveItemContent(content) {
   } finally { busy = false; $('editor').inert = false; }
 }
 contentLists = createContentLists({ getSnapshot: () => snapshot, onSave: saveItemContent, onStage: content => { snapshot.draft = content; markDirty(); }, onError: message => status(message,true),onDetail:rememberDetail });
+chatKnowledge = createChatKnowledge(()=>client,id=>rememberDetail('knowledge',id));
 creditPolicy = createCreditPolicy(() => client);
 promptStudio = createPromptStudio(() => client);
 legal = createLegalDocuments(() => client,rememberDetail);
@@ -219,7 +224,7 @@ $('preview').onclick = () => {
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
-window.addEventListener('beforeunload', (e) => { if (dirty || creditPolicy?.hasUnsaved() || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (dirty || chatKnowledge?.hasUnsaved() || creditPolicy?.hasUnsaved() || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
 $('logout').onclick = async () => { if ((dirty || creditPolicy?.hasUnsaved()) && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;

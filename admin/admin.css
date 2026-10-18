@@ -472,3 +472,7 @@ h1{font-size:25px}
 .metric-table-paged{min-width:0;max-width:100%}.metric-table-paged>.table-scroll{margin-top:0}.page-numbers{flex-wrap:wrap}
 .pagination .page-numbers{order:1}.pagination .page-jump{order:3}.pagination>button:last-child{order:2}
 .page-jump label{flex-direction:row}
+
+.knowledge-dialog{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto}.knowledge-dialog form{display:grid;gap:16px}.knowledge-dialog label{display:grid;gap:6px}.knowledge-dialog small{font-weight:400;color:var(--muted,#666)}.knowledge-dialog .check{display:flex;align-items:center;gap:8px}.knowledge-dialog .check input{width:auto}#knowledge .filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px}#knowledge .table-wrap{overflow:auto}#knowledge td{overflow-wrap:anywhere}#knowledge .section-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+.knowledge-tools{display:flex;gap:8px;flex-wrap:wrap}.knowledge-dialog .section-heading{margin:0 0 16px}.knowledge-dialog .item-dialog-actions{margin-top:0;flex-wrap:wrap}

@@ -1,7 +1,7 @@
-export const ADMIN_TABS = ['dashboard', 'credits', 'products', 'faqs', 'notice', 'prompts', 'announcements', 'push', 'legal', 'support', 'members', 'chats', 'payments', 'ads', 'friends', 'admins'];
+export const ADMIN_TABS = ['dashboard', 'credits', 'products', 'faqs', 'notice', 'prompts', 'announcements', 'push', 'legal', 'support', 'members', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'admins'];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const key = /^[a-z0-9._:-]{1,80}$/i;
-const detailTabs = new Set(['products', 'faqs', 'announcements', 'push', 'legal', 'support', 'members']);
+const detailTabs = new Set(['products', 'faqs', 'announcements', 'push', 'legal', 'support', 'members', 'knowledge']);
 export const RETURN_ROUTE_KEY = 'mental:admin:return-route:v1';
 export function readAdminRoute(value) {
   const url = new URL(value, 'https://cande.fyi');
@@ -18,7 +18,7 @@ export function readAdminRoute(value) {
     return {tab,id,version:null,user:id?user:null,...(tab==='chats'?{message:id&&validId(message)?message:null}:{})};
   }
   let id = pathTab && segments.length === 3 ? segments[2] : null;
-  if (!detailTabs.has(tab) || !(id === 'new' && ['faqs', 'announcements', 'push'].includes(tab) || (['products', 'faqs', 'legal'].includes(tab) ? key : uuid).test(id ?? ''))) id = null;
+  if (!detailTabs.has(tab) || !(id === 'new' && ['faqs', 'announcements', 'push', 'knowledge'].includes(tab) || (['products', 'faqs', 'legal'].includes(tab) ? key : uuid).test(id ?? ''))) id = null;
   const candidate = url.searchParams.get('version');
   const version = tab === 'legal' && id && (candidate === 'new' || uuid.test(candidate ?? '')) ? candidate : null;
   return { tab, id, version };
