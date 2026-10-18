@@ -4,6 +4,8 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.te
 const date=v=>new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
 const states={open:'접수',answered:'답변됨',closed:'종료'};
 const alerts={pending:'발송 대기',sending:'발송 중',sent:'발송됨',failed:'발송 실패',historical:'알림 연결 전 접수'};
+const senderName=item=>item.is_anonymized?(item.restored_from_slack?'익명 보관 · Slack 복구':'탈퇴 · 익명 보관'):(item.nickname||(item.is_guest?'게스트':'프로필 미설정'));
+const senderContact=item=>item.is_anonymized?'개인정보 삭제됨':(item.reply_email||'회신 이메일 없음');
 const attachmentUrl=value=>{try{const url=new URL(value);return url.protocol==='https:'&&url.hostname.endsWith('.supabase.co')&&url.pathname.startsWith('/storage/v1/object/sign/mental-media/')?url.href:null;}catch{return null;}};
 export function createSupport(getClient, { onDetail = () => {} } = {}){
  let generation=0,ticket=0,detailTicket=0;
@@ -31,7 +33,7 @@ export function createSupport(getClient, { onDetail = () => {} } = {}){
     preview.append(thumbnail);
    }
    content.append(preview);row.append(content);
-   const sender=el('td',null,'support-sender');sender.append(el('p',item.nickname||(item.is_guest?'게스트':'프로필 미설정')),el('p',item.reply_email||'회신 이메일 없음','row-summary'));row.append(sender);
+   const sender=el('td',null,'support-sender');sender.append(el('p',senderName(item)),el('p',senderContact(item),'row-summary'));row.append(sender);
    for(const value of [date(item.created_at),states[item.status]||item.status,alerts[item.notification_state]||'확인 필요'])row.append(el('td',value));
    const actions=el('td',null,'row-actions'),button=el('button','상세');button.type='button';button.onclick=()=>void detail(item.id);actions.append(button);row.append(actions);
    row.onclick=e=>{if(!e.target.closest('button,a'))void detail(item.id);};body.append(row);
@@ -55,7 +57,9 @@ export function createSupport(getClient, { onDetail = () => {} } = {}){
   if(!$('support-detail-dialog').open)$('support-detail-dialog').showModal();$('support-detail-close').focus();if(notify)onDetail('support',id);
   try{const data=await request({action:'detail',id});if(current!==detailTicket||session!==generation||!$('support-detail-dialog').open)return;
    const item=data.requests[0],fields=$('support-detail-fields');
-   for(const [label,value] of [['접수 번호',item.id],['유형',item.category],['제목',item.subject||'없음'],['보낸 사람',item.nickname||(item.is_guest?'게스트':'프로필 미설정')],['회신 이메일',item.reply_email||'없음'],['접수 시각 (KST)',date(item.created_at)],['상태',states[item.status]||item.status],['Slack 알림',alerts[item.notification_state]||'확인 필요']])fields.append(el('dt',label),el('dd',value));
+   for(const [label,value] of [['접수 번호',item.id],['유형',item.category],['제목',item.subject||'없음'],['보낸 사람',senderName(item)],['회신 이메일',item.is_anonymized?'개인정보 삭제됨':(item.reply_email||'없음')],['접수 시각 (KST)',date(item.created_at)],['상태',states[item.status]||item.status],['Slack 알림',alerts[item.notification_state]||'확인 필요']])fields.append(el('dt',label),el('dd',value));
+   if(item.is_anonymized)fields.append(el('dt','익명 보관 시각 (KST)'),el('dd',date(item.anonymized_at)));
+   if(item.restored_from_slack)fields.append(el('dt','Slack 복구 시각 (KST)'),el('dd',date(item.restored_at)));
    $('support-detail-body').textContent=item.content||'';
    if(item.has_attachment){
     const url=attachmentUrl(item.attachmentUrl);
