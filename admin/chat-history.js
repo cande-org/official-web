@@ -1,3 +1,4 @@
+import {isRetained,ownerKey,ownerLabel,accountBadge} from './account-status.js';
 import {renderPager,setPagerBusy,clearPager} from './pagination.js';
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -15,9 +16,9 @@ export function createChatHistory(getClient,onDetail=()=>{}){
   let cursors=[null],page=0,filters=null;
   const status=(message,error=false)=>{$('chat-status').textContent=message;$('chat-status').classList.toggle('error',error);};
   const today=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
-  function resetFilters(){const end=today();$('chat-end').value=end;$('chat-start').value=new Date(Date.parse(end)-6*86400000).toISOString().slice(0,10);$('chat-user').value='';$('chat-kind').value='user';$('chat-size').value='20';}
+  function resetFilters(){const end=today();$('chat-end').value=end;$('chat-start').value=new Date(Date.parse(end)-6*86400000).toISOString().slice(0,10);$('chat-user').value='';$('chat-kind').value='user';$('chat-account-state').value='all';$('chat-size').value='20';}
   resetFilters();
-  function readFilters(){const user=$('chat-user').value.trim();if(user&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user))throw Error('회원 UID는 전체 UUID를 입력해 주세요.');return {...chatPeriod($('chat-start').value,$('chat-end').value),kind:$('chat-kind').value,userId:user||null,size:Number($('chat-size').value)};}
+  function readFilters(){const user=$('chat-user').value.trim();if(user&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user))throw Error('회원 UID는 전체 UUID를 입력해 주세요.');return {...chatPeriod($('chat-start').value,$('chat-end').value),accountState:$('chat-account-state').value,kind:$('chat-kind').value,userId:user||null,size:Number($('chat-size').value)};}
   async function request(body){
     const {data}=await getClient().auth.getSession();if(!data.session)throw Error('관리자 로그인이 필요합니다.');
     const {data:result,error}=await getClient().functions.invoke('admin-chat-history',{method:'POST',body});
@@ -28,13 +29,13 @@ export function createChatHistory(getClient,onDetail=()=>{}){
   function renderList(data){
     const wrap=node('div',null,'collection-scroll');wrap.tabIndex=0;wrap.setAttribute('aria-label','최신 메시지 목록');
     const table=node('table',null,'collection-table admin-record-table chat-table'),head=node('thead'),headers=node('tr'),body=node('tbody');
-    for(const label of ['전송 시각 (KST)','구분','메시지','채팅방','회원 UID','관리']){const th=node('th',label);th.scope='col';headers.append(th);}head.append(headers);
+    for(const label of ['전송 시각 (KST)','구분','메시지','채팅방','UID·보관용 키','관리']){const th=node('th',label);th.scope='col';headers.append(th);}head.append(headers);
     for(const item of data.messages){
-      const open=()=>void openDetail({user:item.user_id,id:item.room_id,message:item.id},true),row=node('tr');
+      const open=()=>void openDetail({user:ownerKey(item),id:item.room_id,message:item.id,...(isRetained(item)?{accountState:'deleted'}:{})},true),row=node('tr');
       row.append(node('td',time(item.sent_at),'audit-date'),node('td',labels[item.sender_kind]??item.sender_kind));
       const preview=node('td',null,'chat-preview');preview.append(button(item.preview||'(빈 메시지)',open,'row-title'));row.append(preview);
       row.append(node('td',item.room_title||'이름 없는 방','chat-room-name'));
-      const user=node('td',null,'chat-owner');const owner=button(`${item.user_id.slice(0,8)}…${item.user_id.slice(-6)}`,()=>{$('chat-user').value=item.user_id;void load(true);},'chat-owner-id');owner.title=item.user_id;owner.setAttribute('aria-label',`이 UID로 조회: ${item.user_id}`);user.append(owner,node('span',item.is_guest?'게스트':'회원','helper'));row.append(user);
+      const user=node('td',null,'chat-owner');const owner=button(`${ownerKey(item).slice(0,8)}…${ownerKey(item).slice(-6)}`,()=>{$('chat-user').value=ownerKey(item);void load(true);},'chat-owner-id');owner.title=ownerKey(item);owner.setAttribute('aria-label',`${ownerLabel(item)}로 조회: ${ownerKey(item)}`);user.append(owner,accountBadge(item));row.append(user);
       const action=node('td',null,'row-actions');action.append(button('대화 보기',open));row.append(action);
       row.onclick=e=>{if(!e.target.closest('button,a,input,select'))open();};body.append(row);
     }
@@ -73,16 +74,16 @@ export function createChatHistory(getClient,onDetail=()=>{}){
     $('chat-room-title').textContent='채팅방 대화';$('chat-room-meta').textContent='';$('chat-messages').replaceChildren();$('chat-room-count').textContent='';$('chat-detail-status').textContent='대화를 불러오는 중…';
     $('chat-older').disabled=true;$('chat-newer').disabled=true;
     if(!$('chat-dialog').open)$('chat-dialog').showModal();$('chat-close').focus();if(notify)onDetail({...route});
-    try{const result=await request({action:'room',userId:route.user,roomId:route.id,messageId:route.message??null});
+    try{const result=await request({action:'room',userId:route.user,accountState:route.accountState,roomId:route.id,messageId:route.message??null});
       if(ticket!==detailTicket||gen!==generation||!$('chat-dialog').open)return;
-      $('chat-room-title').textContent=result.room.title||'이름 없는 방';$('chat-room-meta').textContent=`${result.room.is_guest?'게스트':'회원'} UID ${result.room.user_id} · 방 ID ${result.room.id}`;
+      $('chat-room-title').textContent=result.room.title||'이름 없는 방';$('chat-room-meta').textContent=`${isRetained(result.room)?'탈퇴 회원':result.room.is_guest?'게스트':'회원'} · ${ownerLabel(result.room)} ${ownerKey(result.room)}${result.room.deleted_at?' · 탈퇴 '+time(result.room.deleted_at):''} · 방 ID ${result.room.id}`;
       rows=result.messages;before=result.hasBefore;after=result.hasAfter;renderRoom(route.message);$('chat-detail-status').textContent='';
     }catch(error){if(ticket===detailTicket&&gen===generation)$('chat-detail-status').textContent=error.message;}
   }
   async function extend(direction){
     if(!active||!rows.length)return;const boundary=direction==='before'?rows[0]:rows.at(-1),gen=generation,ticket=++detailTicket;
     $('chat-older').disabled=true;$('chat-newer').disabled=true;$('chat-detail-status').textContent='대화를 더 불러오는 중…';
-    try{const result=await request({action:'room',userId:active.user,roomId:active.id,direction,cursor:{sentAt:boundary.sent_at,id:boundary.id}});
+    try{const result=await request({action:'room',userId:active.user,accountState:active.accountState,roomId:active.id,direction,cursor:{sentAt:boundary.sent_at,id:boundary.id}});
       if(ticket!==detailTicket||gen!==generation||!$('chat-dialog').open)return;
       const ids=new Set(rows.map(m=>m.id)),fresh=result.messages.filter(m=>!ids.has(m.id));rows=direction==='before'?[...fresh,...rows]:[...rows,...fresh];
       if(direction==='before')before=result.hasBefore;else after=result.hasAfter;renderRoom(boundary.id);$('chat-detail-status').textContent='';
@@ -97,5 +98,5 @@ export function createChatHistory(getClient,onDetail=()=>{}){
   $('chat-next').onclick=()=>{if(next){cursors[++page]=next;offset=page*filters.size;void load();}};
   $('chat-close').onclick=close;$('chat-done').onclick=close;$('chat-older').onclick=()=>extend('before');$('chat-newer').onclick=()=>extend('after');
   $('chat-latest').onclick=()=>{if(active)void openDetail({...active,message:null},true);};
-  return {load,openDetail,closeDetail:close,clear:()=>{generation++;listTicket++;close();filters=null;next=null;cursors=[null];page=0;offset=0;$('chat-list').replaceChildren();$('chat-count').textContent='';$('chat-page').textContent='';status('');$('chat-refresh').disabled=false;resetFilters();}};
+  return {load,setRoute:route=>{if(route.accountState||route.owner){$('chat-account-state').value=route.accountState??'all';$('chat-user').value=route.owner??'';filters=null;}},openDetail,closeDetail:close,clear:()=>{generation++;listTicket++;close();filters=null;next=null;cursors=[null];page=0;offset=0;$('chat-list').replaceChildren();$('chat-count').textContent='';$('chat-page').textContent='';status('');$('chat-refresh').disabled=false;resetFilters();}};
 }

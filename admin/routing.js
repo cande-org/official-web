@@ -9,25 +9,39 @@ export function readAdminRoute(value) {
   try { segments = url.pathname.replace(/\/$/, '').split('/').filter(Boolean).map(decodeURIComponent); } catch { segments = []; }
   const pathTab = segments[0] === 'admin' && ADMIN_TABS.includes(segments[1]) ? segments[1] : null;
   const tab = pathTab ?? 'dashboard';
-  if(['payments','ads'].includes(tab)){const value=segments[2];const id=segments.length===3&&typeof value==='string'&&value.length>0&&value.length<=512&&!/[\u0000-\u001f\u007f]/.test(value)&&!['.','..'].includes(value)?value:null;return{tab,id,version:null};}
+  const archived=url.searchParams.get('account')==='deleted';
+  const account=['active','deleted'].includes(url.searchParams.get('account'))?{accountState:url.searchParams.get('account')}:{};
+  const owner=uuid.test(url.searchParams.get('owner')??'')?{owner:url.searchParams.get('owner')}:{};
+  const listFilters=['chats','payments','ads','friends','members'].includes(tab)?{...account,...owner}:{};
+  if(['payments','ads'].includes(tab)){const value=segments[2];const id=segments.length===3&&typeof value==='string'&&value.length>0&&value.length<=512&&!/[\u0000-\u001f\u007f]/.test(value)&&!['.','..'].includes(value)?value:null;const archive=url.searchParams.get('archive');return{tab,id,version:null,...listFilters,...(id&&archived&&uuid.test(archive??'')?{archive}:{} )};}
   if(tab==='chats'||tab==='friends'){
     const validId=v=>typeof v==='string'&&v.length>0&&v.length<=(tab==='friends'?160:128)&&!/[\u0000-\u001f\u007f]/.test(v);
     const user=segments.length===4&&uuid.test(segments[2])?segments[2]:null;
     const id=user&&validId(segments[3])?segments[3]:null;
     const message=url.searchParams.get('message');
-    return {tab,id,version:null,user:id?user:null,...(tab==='chats'?{message:id&&validId(message)?message:null}:{})};
+    return {tab,id,version:null,...listFilters,user:id?user:null,...(tab==='chats'?{message:id&&validId(message)?message:null}:{})};
   }
   let id = pathTab && segments.length === 3 ? segments[2] : null;
   if (!detailTabs.has(tab) || !(id === 'new' && ['faqs', 'announcements', 'push', 'knowledge'].includes(tab) || (['products', 'faqs', 'legal'].includes(tab) ? key : uuid).test(id ?? ''))) id = null;
   const candidate = url.searchParams.get('version');
   const version = tab === 'legal' && id && (candidate === 'new' || uuid.test(candidate ?? '')) ? candidate : null;
-  return { tab, id, version };
+  return { tab, id, version, ...listFilters };
 }
 export function adminRouteUrl(route) {
-  if(route.tab==='chats'||route.tab==='friends'){const path=`/admin/${route.tab}${route.user&&route.id?`/${encodeURIComponent(route.user)}/${encodeURIComponent(route.id)}`:''}`;return route.tab==='chats'&&route.message&&route.id?`${path}?${new URLSearchParams({message:route.message})}`:path;}
-  const path = `/admin/${encodeURIComponent(route.tab)}${route.id ? `/${encodeURIComponent(route.id)}` : ''}`;
-  return route.version ? `${path}?${new URLSearchParams({version: route.version})}` : path;
+ let path;
+ if(route.tab==='chats'||route.tab==='friends')path=`/admin/${route.tab}${route.user&&route.id?`/${encodeURIComponent(route.user)}/${encodeURIComponent(route.id)}`:''}`;
+ else path=`/admin/${encodeURIComponent(route.tab)}${route.id?`/${encodeURIComponent(route.id)}`:''}`;
+ const params=new URLSearchParams();
+ if(route.version)params.set('version',route.version);
+ if(route.tab==='chats'&&route.message&&route.id)params.set('message',route.message);
+ if(['members','chats','payments','ads','friends'].includes(route.tab)){
+  if(['active','deleted'].includes(route.accountState))params.set('account',route.accountState);
+  if(!route.id&&route.owner)params.set('owner',route.owner);
+  if(route.id&&['payments','ads'].includes(route.tab)&&route.accountState==='deleted'&&route.archive)params.set('archive',route.archive);
+ }
+ return params.size?`${path}?${params}`:path;
 }
+
 const sameRoute = (a, b) => adminRouteUrl(a) === adminRouteUrl(b);
 // Only tab/record/version survive OAuth; never retain a token or arbitrary URL.
 export function resumeAdminRoute(location, storage) {

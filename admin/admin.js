@@ -85,7 +85,7 @@ const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
   if(busy||chatKnowledge?.isBusy()||creditPolicy?.isBusy()||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
   return !(chatKnowledge?.hasUnsaved()||creditPolicy?.hasUnsaved()||contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
 }});
-function rememberDetail(tab,id,version=null){router.go({tab,id,version},{notify:false,check:false});}
+function rememberDetail(tab,id,version=null,accountState){router.go({tab,id,version,...(accountState?{accountState}:{})},{notify:false,check:false});}
 function closeRouteDialogs(){
   for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);
   chatKnowledge?.closeDetail();contentLists?.closeDetail();announcements?.closeDetails();members?.closeDetail();chatHistory?.closeDetail();operations?.closeDetail();support?.closeDetail();legal?.closeDetail();
@@ -112,7 +112,7 @@ async function applyRoute(route){
   closeRouteDialogs();selectTab(route.tab,{skipLoad:true});
   try{
     const module=route.tab==='knowledge'?chatKnowledge:isOperationTab(route.tab)?operations.view(route.tab):route.tab==='chats'?chatHistory:route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
-    if(module){const loaded=await module.load();if((module===announcements||module===legal)&&loaded!==true)return;}
+    if(module){module.setRoute?.(route);const loaded=await module.load();if((module===announcements||module===legal)&&loaded!==true)return;}
     else if(route.tab==='dashboard')await loadMetrics();
     else if(route.tab==='admins')await loadAdmins();
     else if(route.tab==='prompts')await promptStudio.load();
@@ -121,6 +121,7 @@ async function applyRoute(route){
     if(!route.id)return;
     let result;
     if(isOperationTab(route.tab))result=await operations.openDetail(route);
+    else if(route.tab==='members')result=await members.openDetail(route.id,route.accountState);
     else if(route.tab==='chats')result=await chatHistory.openDetail(route);
     else if(['products','faqs'].includes(route.tab))result=contentLists.openDetail(route.tab,route.id);
     else if(['announcements','push'].includes(route.tab))result=await announcements.openDetail(route.tab,route.id);
