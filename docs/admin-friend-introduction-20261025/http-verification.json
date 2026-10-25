@@ -1,0 +1,22 @@
+{
+  "/admin/friends": {
+    "status": 200,
+    "cache_control": "no-store",
+    "noindex": "noindex, nofollow",
+    "filter_markup": true
+  },
+  "/admin/admin.js": {
+    "status": 200,
+    "cache_control": "no-store",
+    "noindex": "noindex, nofollow",
+    "has_introduction_filter": true,
+    "has_introduction_detail": true,
+    "local_dist_match": true,
+    "sha256": "4d1dc1b1443fbd7a4d0a528790c3a63730734c24cca49167b70795697fefea5b"
+  },
+  "/admin/admin.css": {
+    "status": 200,
+    "cache_control": "no-store",
+    "noindex": "noindex, nofollow"
+  }
+}

@@ -7,3 +7,5 @@
 2026-10-25 확인 기준 친구1229개, 소개 있는 친구1개다. 기존 정렬 인덱스를 유지하며 작은 관리자 목록의 유무 필터 때문에 소개 본문 인덱스·별도 중복 컬럼을 추가하지 않는다. 규모/쿼리 지연 증가 시 실제 실행계획에 따라 소개 있는 행만 담는 부분 인덱스를 검토한다. 모바일 앱 수정·재배포는 없다.
 
 검증: `npm run check`, `npm test`25개, `npm run build`, `operations-browser.mjs` 통과. 브라우저 검증은 합성 데이터로 필터별 결과·초기화·500자/줄바꿈·HTML 비실행·페이지 이동·권한 오류·로그아웃/지연 응답과360/390/430px를 확인했다. screenshots/는 합성 데이터 검증 화면이다.
+
+운영 배포: CANDE/cande6/official-web, production `1ea8473bc00d49a2f470a16d6a731263bca069df`, Ready. 운영 파일 HTTP200·no-store·noindex와 빌드 JS 일치를 확인했다. [HTTP 검증](http-verification.json). Cande 배포 계정은 기존 관리자 allowlist에 없어 실사용자 소개를 운영 화면에서 열지는 않았고, 새 관리자 권한은 추가하지 않았다. 화면 증거는 합성 데이터다.
