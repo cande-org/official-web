@@ -101,7 +101,7 @@ export function createPromptStudio(getClient) {
     card.append(make('p', `${response.model} · 추론 ${response.reasoningEffort} · ${response.durationMs}ms · 입력 ${input || '—'} / 출력 ${output || '—'} 토큰${estimate} · ${response.quotaUsed == null ? '모델 호출 없음' : `사용 ${response.quotaUsed}/40`}`, 'prompt-result-meta'));
     if (response.voiceChecks?.cuteEligibleCount > 0) {
       const candidate = response.result.messages?.find(item => item.memberId === response.voiceChecks.cuteMember);
-      card.append(make('p', candidate ? `이번 턴 애교 어미 후보: ${candidate.senderName} · 상황과 상위 지침이 우선합니다.` : '이번 턴은 평소 말투 · 허용된 애교 어미는 일부 턴에만 선택됩니다.', 'prompt-result-meta'));
+      card.append(make('p', candidate ? `이번 턴 애교 어미 후보: ${candidate.senderName} · 상황과 상위 지침이 우선합니다.` : '이번 턴은 평소 말투로 선택 · 현재 요청과 상황이 우선합니다.', 'prompt-result-meta'));
     }
     if (response.voiceChecks?.removedOpeners > 0) card.append(make('p', `금지된 되받기 첫 문장 ${response.voiceChecks.removedOpeners}개를 정리했습니다.`, 'prompt-result-meta'));
     if (response.result.mode === 'safety') card.append(make('p', '안전 안내: ' + response.result.safetyMessage));
