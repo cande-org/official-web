@@ -24,6 +24,8 @@ export function createPromptStudio(getClient) {
   let snapshot, loading = false, busy = false, changed = false, cases = [];
   let histories = { published: [], custom: [] };
   let scenario = 'reply', memberMode = 'all';
+  let productionSettings = { model: 'gpt-6-luna', reasoningEffort: 'low' };
+  let settingsLoaded = false;
   const fields = { stable: $('prompt-stable'), anxious: $('prompt-anxious'), avoidant: $('prompt-avoidant') };
   const status = (message, error = false) => { $('prompt-status').textContent = message; $('prompt-status').classList.toggle('error', error); };
   const testStatus = (message, error = false) => { $('prompt-test-status').textContent = message; $('prompt-test-status').classList.toggle('error', error); };
@@ -36,7 +38,7 @@ export function createPromptStudio(getClient) {
     const { data, error } = await client.functions.invoke('admin-prompt-studio', { method: payload ? 'POST' : 'GET', ...(payload ? { body: payload } : {}) });
     if (error) {
       const code = error.context?.status;
-      throw Error(code === 429 ? '오늘의 테스트 한도 40건을 모두 사용했습니다.' : code === 409 ? '다른 관리자가 먼저 수정했습니다. 새로 불러온 뒤 다시 시도해 주세요.' : code === 403 ? '프롬프트 관리 권한이 없습니다.' : code === 400 ? '입력값을 확인해 주세요.' : '서버 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
+      throw Error(code === 429 ? '오늘의 테스트 한도 40건을 모두 사용했습니다.' : code === 409 ? '다른 관리자가 먼저 수정했습니다. 새로 불러온 뒤 다시 시도해 주세요.' : code === 403 ? '프롬프트 관리 권한이 없습니다.' : code === 413 ? '테스트 요청이 너무 큽니다. 대화를 초기화한 뒤 다시 시도해 주세요.' : code === 400 ? '입력값을 확인해 주세요.' : '서버 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
     }
     return data;
   }
@@ -44,6 +46,13 @@ export function createPromptStudio(getClient) {
     if (!snapshot) return;
     for (const [key, field] of Object.entries(fields)) field.value = snapshot.draft[key];
     changed = false;
+    productionSettings = snapshot.productionSettings ?? productionSettings;
+    if (!settingsLoaded) {
+      $('prompt-model').value = productionSettings.model;
+      $('prompt-reasoning').value = productionSettings.reasoningEffort;
+      settingsLoaded = true;
+    }
+    $('prompt-production-settings').textContent = `공개본은 운영과 같은 ${productionSettings.model} · 추론 ${productionSettings.reasoningEffort}로 테스트합니다. 편집 중 문구도 기본은 같은 설정이며, 다른 설정은 비교 실험에만 사용합니다.`;
     $('prompt-meta').textContent = `초안 v${snapshot.revision} · 앱 공개 v${snapshot.published_revision} · 마지막 공개 ${labelTime(snapshot.published_at)}`;
     const select = $('prompt-versions'); select.replaceChildren();
     for (const item of snapshot.history.filter(item => ['seed', 'publish', 'rollback'].includes(item.action))) {
@@ -53,7 +62,7 @@ export function createPromptStudio(getClient) {
   async function load(force = false) {
     if (loading || busy || (changed && !force)) return;
     loading = true; status('프롬프트를 불러오는 중…');
-    try { snapshot = await request(); render(); status(''); }
+    try { snapshot = await request(); resetConversation(); render(); status(''); }
     catch (error) { status(error.message, true); }
     finally { loading = false; }
   }
@@ -61,12 +70,13 @@ export function createPromptStudio(getClient) {
     if (busy || !snapshot) return;
     const guides = draft();
     if (action !== 'rollback' && !isValid(guides)) { status('각 성향 지침을 20~1,200자로 작성해 주세요.', true); return; }
-    if (action === 'publish' && !confirm('현재 편집한 성향 지침을 앱의 새 대화에 공개할까요?')) return;
+    if (action === 'publish' && !confirm('현재 입력창의 성향 지침을 앱에 공개할까요? 초안 저장 없이도 공개되며, 기존 방을 포함한 다음 새 메시지부터 적용됩니다.')) return;
     if (action === 'rollback' && !confirm(`공개 v${targetRevision}의 지침을 다시 앱에 적용할까요?`)) return;
     busy = true; status(action === 'save' ? '초안 저장 중…' : '앱에 적용 중…');
     try {
       snapshot = await request({ action, revision: snapshot.revision, ...(action === 'rollback' ? { targetRevision } : { guides }) });
-      render(); status(action === 'save' ? '초안이 저장됐습니다. 앱에는 아직 반영되지 않았습니다.' : '새 버전이 앱 대화에 적용됐습니다.');
+      if (action !== 'save') resetConversation();
+      render(); status(action === 'save' ? '초안이 저장됐습니다. 앱에는 아직 반영되지 않았습니다.' : '새 버전이 앱의 다음 새 메시지부터 적용됩니다. 테스트 대화는 초기화했습니다.');
     } catch (error) { status(error.message, true); }
     finally { busy = false; }
   }
@@ -98,30 +108,40 @@ export function createPromptStudio(getClient) {
     score.addEventListener('change', () => { response.scores = Object.fromEntries([...score.querySelectorAll('select')].map(select => [select.dataset.score, select.value])); });
     card.append(score); return card;
   }
+  function setTestBusy(value) {
+    for (const control of document.querySelectorAll('#prompts textarea, #prompts select, #prompts button')) control.disabled = value;
+  }
   async function run() {
     if (busy || !snapshot) return;
     const guides = draft(), message = $('prompt-message').value.trim();
     if (!isValid(guides)) { testStatus('성향 지침은 각각 20~1,200자여야 합니다.', true); return; }
     if (!message || message.length > 1200) { testStatus('테스트 메시지를 1~1,200자로 입력해 주세요.', true); return; }
-    busy = true; $('prompt-run').disabled = true; testStatus('공개본과 편집 중 지침으로 각각 생성 중…');
+    busy = true; setTestBusy(true); testStatus('공개본과 편집 중 지침으로 각각 생성 중…');
     const selected = selectedMembers();
     const variants = ['published', 'custom'];
     const outcome = await Promise.all(variants.map(async variant => {
-      try { return await request({ action: 'test', variant, model: variant === 'custom' ? $('prompt-model').value : 'gpt-6-luna', reasoningEffort: variant === 'custom' ? $('prompt-reasoning').value : 'none', ...(variant === 'custom' ? { guides } : {}), message, members: selected, history: histories[variant] }); }
+      try { return await request({ action: 'test', variant, ...(variant === 'custom' ? { model: $('prompt-model').value, reasoningEffort: $('prompt-reasoning').value } : {}), ...(variant === 'custom' ? { guides } : {}), message, members: selected, history: histories[variant] }); }
       catch (error) { return { error: error.message }; }
     }));
-    const record = { at: new Date().toISOString(), scenario, memberMode, message, publishedRevision: snapshot.published_revision, draftRevision: snapshot.revision, guides, published: outcome[0], custom: outcome[1] };
+    const record = { at: new Date().toISOString(), scenario, memberMode, message, publishedRevision: outcome[0].revision ?? snapshot.published_revision, draftRevision: snapshot.revision, guides, published: outcome[0], custom: outcome[1] };
     cases.push(record);
     const row = make('div', undefined, 'prompt-result-row'); row.append(make('h3', `#${cases.length} · ${message}`, 'prompt-case-title'));
-    const pair = make('div', undefined, 'prompt-result-pair'); pair.append(resultCard(`공개 v${snapshot.published_revision}`, outcome[0]), resultCard('편집 중 지침', outcome[1])); row.append(pair); $('prompt-results').prepend(row);
+    const pair = make('div', undefined, 'prompt-result-pair'); pair.append(resultCard(`공개 v${record.publishedRevision}`, outcome[0]), resultCard('편집 중 지침', outcome[1])); row.append(pair); $('prompt-results').prepend(row);
     for (const [index, variant] of variants.entries()) {
       const response = outcome[index];
       if (!response.error && response.result.mode !== 'safety') histories[variant] = trimHistory([...histories[variant], { role: 'user', content: message }, ...response.result.messages.map(item => ({ role: 'assistant', memberId: item.memberId, senderName: item.senderName, content: item.content }))]);
     }
     testStatus(outcome.every(item => !item.error) ? '비교가 완료됐습니다. 같은 맥락에서 다음 메시지를 이어서 테스트할 수 있습니다.' : '일부 응답에 실패했습니다. 결과 카드에서 확인해 주세요.', outcome.some(item => item.error));
-    busy = false; $('prompt-run').disabled = false;
+    busy = false; setTestBusy(false);
   }
-  for (const field of Object.values(fields)) field.addEventListener('input', () => { changed = true; status('편집 중 · 저장 전에는 앱에 반영되지 않습니다.'); });
+  function invalidateComparison() {
+    if (!cases.length && !histories.published.length && !histories.custom.length) return;
+    resetConversation();
+    testStatus('문구 또는 설정이 바뀌어 이전 테스트 대화를 초기화했습니다. 새 조건으로 비교해 주세요.');
+  }
+  for (const field of Object.values(fields)) field.addEventListener('input', () => { changed = true; invalidateComparison(); status('편집 중 · 저장 없이 바로 테스트할 수 있습니다. 앱 반영은 ‘앱에 공개’를 눌러 주세요.'); });
+  $('prompt-model').onchange = invalidateComparison;
+  $('prompt-reasoning').onchange = invalidateComparison;
   $('prompt-save').onclick = () => write('save');
   $('prompt-refresh').onclick = () => { if (!changed || confirm('저장하지 않은 프롬프트 변경사항을 버릴까요?')) load(true); };
   $('prompt-publish').onclick = () => write('publish');
@@ -136,5 +156,5 @@ export function createPromptStudio(getClient) {
     const link = make('a'); link.href = url; link.download = `persona-test-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   $('prompt-message').value = scenarios.reply;
-  return { load, clear: () => { snapshot = null; changed = false; resetConversation(); }, hasUnsaved: () => changed };
+  return { load, clear: () => { snapshot = null; changed = false; settingsLoaded = false; resetConversation(); }, hasUnsaved: () => changed };
 }
