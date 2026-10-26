@@ -61,9 +61,9 @@ export function createMembers(client, onPush, onDetail = () => {}) {
         for(const [label,value] of [['계정 상태','탈퇴 회원'],['닉네임',member.nickname||'프로필 미설정'],['가입일 (KST)',date(member.created_at)],['탈퇴 시각 (KST)',date(member.deleted_at)],['최근 활동 (KST)',date(member.last_active_at)],['계정 유형',member.is_guest?'게스트':'회원']])fields.append(el('dt',label),el('dd',value));
         renderHistorySummary(member);void loadHistory(1);
       }else{
-      for(const [label,value] of [['닉네임',member.nickname||'프로필 미설정'],['이메일',member.email||'없음'],['가입일 (KST)',date(member.created_at)],['최근 활동 (KST)',date(member.last_active_at)],['최근 로그인 (KST)',date(member.last_sign_in_at)],['로그인 방식',member.providers.join(' · ')||'기록 없음'],['알림 허용 기기',`${member.push_devices}대 (iOS ${member.ios_devices} · Android ${member.android_devices})`],['클릭 집계 지원',`${member.tracking_devices}대`],['푸시 대상',member.is_admin?'운영 관리자 계정은 발송 대상에서 제외됩니다.':member.push_devices?'알림을 허용한 기기에만 발송합니다.':'알림을 허용한 기기가 없어 현재 발송할 수 없습니다.']])fields.append(el('dt',label),el('dd',value));
+      for(const [label,value] of [['닉네임',member.nickname||'프로필 미설정'],['이메일',member.email||'없음'],['가입일 (KST)',date(member.created_at)],['최근 활동 (KST)',date(member.last_active_at)],['최근 로그인 (KST)',date(member.last_sign_in_at)],['로그인 방식',member.providers.join(' · ')||'기록 없음'],['알림 허용 기기',`${member.push_devices}대 (iOS ${member.ios_devices} · Android ${member.android_devices})`],['클릭 집계 지원',`${member.tracking_devices}대`],['푸시 대상',member.push_devices?'알림을 허용한 기기에 발송하며, 마케팅 알림은 별도 수신 동의가 필요합니다.':'알림을 허용한 기기가 없어 현재 발송할 수 없습니다.']])fields.append(el('dt',label),el('dd',value));
       }
-      $('member-detail-copy').disabled=false;$('member-detail-push').disabled=member.is_admin||!member.push_devices;$('member-detail-status').textContent='';
+      $('member-detail-copy').disabled=false;$('member-detail-push').disabled=isRetained(member)||!member.push_devices;$('member-detail-status').textContent='';
     }catch(error){if(current===detailTicket&&session===generation)$('member-detail-status').textContent=error.message;}
   }
   function clearHistory(){
@@ -103,6 +103,6 @@ export function createMembers(client, onPush, onDetail = () => {}) {
   $('member-prev').onclick=()=>{view.page--;void load();};$('member-next').onclick=()=>{view.page++;void load();};
   $('member-detail-close').onclick=close;$('member-detail-done').onclick=close;
   $('member-detail-copy').onclick=()=>{if(member)void copy(member.id,$('member-detail-status'));};
-  $('member-detail-push').onclick=()=>{if(!member||member.is_admin||!member.push_devices)return;const id=member.id;close();onPush([id]);};
+  $('member-detail-push').onclick=()=>{if(!member||isRetained(member)||!member.push_devices)return;const id=member.id;close();onPush([id]);};
   return {load,setRoute:route=>{if(route.accountState||route.owner){view.accountState=route.accountState??'all';$('member-account-state').value=view.accountState;view.query=route.owner??'';$('member-search').value=view.query;view.page=1;}},openDetail:(id,state)=>open(id,state??'active',false),closeDetail:close,clear:()=>{generation++;ticket++;detailTicket++;member=null;view.page=1;view.query='';view.accountState='all';$('member-account-state').value='all';clearHistory();$('member-search').value='';$('member-list').replaceChildren();$('member-count').textContent='';$('member-page').textContent='';$('member-status').textContent='';$('member-detail-fields').replaceChildren();$('member-detail-uid').value='';$('member-detail-status').textContent='';$('member-refresh').disabled=false;if($('member-detail-dialog').open)$('member-detail-dialog').close();}};
 }

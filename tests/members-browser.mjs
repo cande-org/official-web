@@ -14,6 +14,7 @@ try{
  await page.evaluate(seed=>{
   window.fetch=async()=>new Response(JSON.stringify({url:'https://fixture.invalid',key:'fixture'}),{headers:{'Content-Type':'application/json'}});
   window.memberRows=Array.from({length:21},(_,i)=>({id:`00000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,nickname:`가상 회원 ${i+1}`,email:`member-${i+1}@example.com`,is_admin:false,created_at:'2026-10-01T00:00:00Z',last_active_at:'2026-10-01T01:00:00Z',last_sign_in_at:'2026-10-01T00:00:00Z',providers:['google'],push_devices:i===1?0:1,ios_devices:i===1?0:1,android_devices:0,tracking_devices:1}));
+  window.memberRows[0].is_admin=true;window.memberRows[1].is_admin=true;
   window.memberCalls=[];window.session={};window.signoutListener=()=>{};
   window.fakeClient={auth:{getSession:async()=>({data:{session:window.session}}),onAuthStateChange:f=>window.signoutListener=f,signOut:async()=>{window.session=null;window.signoutListener('SIGNED_OUT');}},functions:{invoke:async(name,options)=>{
    const body=options?.body;
@@ -35,6 +36,7 @@ try{
  await page.locator('#member-list').getByRole('button',{name:'복사',exact:true}).click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),'00000000-0000-4000-8000-000000000001');
  if(process.env.QA_SCREENSHOT_DIR){fs.mkdirSync(process.env.QA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/members-table.png'});}
  await page.locator('#member-list tbody tr').click();await page.locator('#member-detail-fields').getByText('가상 회원 1',{exact:true}).waitFor();assert.equal(await page.locator('#member-detail-uid').inputValue(),'00000000-0000-4000-8000-000000000001');
+ assert(!(await page.locator('#member-detail-push').isDisabled()));assert((await page.locator('#member-detail-fields').innerText()).includes('마케팅 알림은 별도 수신 동의가 필요합니다.'));assert(!(await page.locator('#member-detail-fields').innerText()).includes('운영 관리자 계정은 발송 대상에서 제외'));
  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+'/member-detail.png'});
  await page.locator('#member-detail-copy').click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),'00000000-0000-4000-8000-000000000001');
  await page.locator('#member-detail-push').click();await page.locator('#push-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#push-user-ids').inputValue(),'00000000-0000-4000-8000-000000000001');assert(!(await page.locator('#push-send').isDisabled()));assert(await page.locator('#members').isHidden());
@@ -47,5 +49,5 @@ try{
  await page.evaluate(()=>{window.pauseMembers=true;});await page.locator('#member-refresh').click();await page.waitForFunction(()=>typeof window.releaseMembers==='function');
  await page.locator('#logout').click();await page.evaluate(()=>window.releaseMembers());await page.waitForFunction(()=>!document.getElementById('member-list').children.length);
  assert(await page.locator('#editor').isHidden());assert.equal(await page.locator('#member-detail-uid').inputValue(),'');assert(!(await page.locator('#member-detail-dialog').isVisible()));assert.deepEqual(errors,[]);
- console.log('PASS full admin browser: member nav/table/page/search/copy/detail, push ready prefill, no-device block, 390px, empty state, logout stale response protection');
+ console.log('PASS full admin browser: member nav/table/page/search/copy/detail, admin push ready prefill, consent guidance, no-device admin block, 390px, empty state, logout stale response protection');
 }finally{await browser.close();}
