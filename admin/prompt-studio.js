@@ -80,7 +80,12 @@ export function createPromptStudio(getClient) {
     } catch (error) { status(error.message, true); }
     finally { busy = false; }
   }
-  function resetConversation() { histories = { published: scenario === 'correction' ? structuredClone(sampleHistory) : [], custom: scenario === 'correction' ? structuredClone(sampleHistory) : [] }; cases = []; $('prompt-results').replaceChildren(); testStatus('대화 맥락을 초기화했습니다.'); }
+  function resetConversation() {
+    const first = selectedMembers()[0];
+    const initial = scenario === 'correction' ? sampleHistory.map(item => item.role === 'assistant' ? { ...item, memberId: first.id, senderName: first.nickname } : { ...item }) : [];
+    histories = { published: structuredClone(initial), custom: structuredClone(initial) };
+    cases = []; $('prompt-results').replaceChildren(); testStatus('대화 맥락을 초기화했습니다.');
+  }
   function trimHistory(items) {
     const recent = items.slice(-16);
     while (recent.filter(item => item.role === 'user').length > 4 || recent.reduce((sum, item) => sum + item.content.length, 0) > 4000) recent.shift();

@@ -41,6 +41,8 @@ try {
  await page.locator('#prompt-save').click();await page.waitForFunction(()=>document.getElementById('prompt-status').textContent.includes('초안이 저장'));assert.equal(await page.locator('.prompt-result-row').count(),1);
  page.on('dialog',d=>d.accept());await page.locator('#prompt-publish').click();await page.waitForFunction(()=>document.getElementById('prompt-status').textContent.includes('다음 새 메시지'));assert.equal(await page.locator('.prompt-result-row').count(),0);
  await page.evaluate(()=>window.defer=true);await page.locator('#prompt-run').click();assert(await page.locator('#prompt-stable').isDisabled());assert(await page.locator('#prompt-reset').isDisabled());await page.waitForFunction(()=>window.releases?.length===2);await page.evaluate(()=>{window.defer=false;window.releases.forEach(resolve=>resolve());});await page.waitForFunction(()=>!document.getElementById('prompt-run').disabled);
+ await page.locator('#prompt-scenario').selectOption('correction');await page.locator('#prompt-members').selectOption('anxious');await run();calls=await tests();
+ assert(calls.at(-1).history.filter(m=>m.role==='assistant').every(m=>m.memberId==='anxious'));
  assert.deepEqual(errors,[]);
  console.log('PASS prompt studio: production defaults, unsaved A/B prompt delivery, continued history, automatic resets, published baseline, experimental none, save/publish and in-flight edit protection');
 } finally {await browser.close();}
