@@ -308,6 +308,12 @@ h1{font-size:25px}
 .prompt-rollback{display:flex;gap:8px}
 .prompt-rollback select{flex:1}
 .prompt-history .helper,.prompt-lab>.helper{display:block;font-size:11px;line-height:1.65;color:#858b95;margin-top:10px}
+#prompt-history-status{font-size:12px;line-height:1.6;margin-top:10px}
+#prompt-version-dialog{width:min(780px,calc(100vw - 32px));max-height:88vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:24px;color:inherit}
+#prompt-version-dialog::backdrop{background:#0007}
+#prompt-version-dialog .prompt-fields label{display:grid;gap:8px}
+#prompt-version-dialog textarea{width:100%;resize:vertical;background:#f8f8f9;font:inherit;font-size:13px;line-height:1.75}
+@media(max-width:650px){#prompt-version-dialog{padding:16px}}
 .prompt-lab{display:grid;gap:14px}
 .prompt-lab .section-heading{margin-bottom:3px}
 .prompt-lab label{font-size:12px}

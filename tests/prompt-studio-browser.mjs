@@ -13,10 +13,17 @@ try {
   return route.fulfill({contentType:'text/html',body:fs.readFileSync('admin/index.html','utf8').replace('<script type="module" src="/admin/admin.js"></script>','<script type="module" src="/studio.js"></script>').replace('id="prompts" hidden','id="prompts"').replace('id="editor" hidden','id="editor"')});
  });
  await page.addInitScript(()=>{
-  window.calls=[];window.snapshot={revision:3,published_revision:2,published_at:'2026-10-25',draft:{stable:'안정형은 느긋하고 다정하게 짧은 대사를 말한다.',anxious:'불안형은 빠르고 생생하게 짧은 대사를 말한다.',avoidant:'회피형은 짧고 건조하게 사실만 담아 말한다.'},history:[],productionSettings:{model:'gpt-6-luna',reasoningEffort:'low'}};
+  window.calls=[];window.snapshot={revision:3,published_revision:2,published_at:'2026-10-25',draft:{stable:'안정형은 느긋하고 다정하게 짧은 대사를 말한다.',anxious:'불안형은 빠르고 생생하게 짧은 대사를 말한다.',avoidant:'회피형은 짧고 건조하게 사실만 담아 말한다.'},history:[{revision:3,action:'save',created_at:'2026-10-26'},{revision:2,action:'publish',created_at:'2026-10-25'}],historyBeforeRevision:2,productionSettings:{model:'gpt-6-luna',reasoningEffort:'low'}};
+  window.versions=Object.fromEntries([1,2,3].map(revision=>[revision,{revision,action:revision===3?'save':revision===2?'publish':'seed',created_at:'2026-10-25',guides:{stable:`이전 안정형 v${revision} 원문 <img src=x onerror=alert(1)>`,anxious:`이전 불안형 v${revision} 원문은 그대로 보여야 한다.`,avoidant:`이전 회피형 v${revision} 원문은 그대로 보여야 한다.`}}]));
   window.fixtureClient={functions:{invoke:async(name,options)=>{
    const body=options?.body;window.calls.push(structuredClone(body??{action:'read'}));
    if(!body)return{data:structuredClone(window.snapshot)};
+   if(body.action==='history')return{data:{history:[{revision:1,action:'seed',created_at:'2026-10-25'}],historyBeforeRevision:null}};
+   if(body.action==='version'){
+    if(window.deferVersion)await new Promise(resolve=>window.releaseVersion=resolve);
+    if(window.versionError)return{error:{context:{status:404}}};
+    return{data:{version:structuredClone(window.versions[body.targetRevision])}};
+   }
    if(body.action==='test'){
     if(window.voiceError)return{error:{context:{status:422}}};
     if(window.defer)await new Promise(resolve=>(window.releases??=[]).push(resolve));
@@ -47,6 +54,34 @@ try {
  assert.match(await page.locator('#prompt-results').textContent(),/애교 어미 후보/);
  await page.evaluate(()=>{window.plainVoice=true;window.removedEcho=true;});await run();assert.match(await page.locator('#prompt-results').textContent(),/이번 턴은 평소 말투/);assert.match(await page.locator('#prompt-results').textContent(),/되받기 첫 문장 1개/);
  await page.evaluate(()=>window.voiceError=true);await run();assert.match(await page.locator('#prompt-results').textContent(),/금지한 되받기 말투가 검출/);assert(!(await page.locator('#prompt-run').isDisabled()));
+ const beforeWrites=await page.evaluate(()=>window.calls.filter(c=>['save','publish','rollback'].includes(c.action)).length);
+ const unpublished='저장하지 않은 합성 지침을 미리보기가 덮어쓰면 안 된다.';
+ await page.locator('#prompt-stable').fill(unpublished);
+ await page.locator('#prompt-versions').selectOption('2');await page.locator('#prompt-view-version').click();
+ await page.locator('#prompt-version-dialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#prompt-version-stable').inputValue(),'이전 안정형 v2 원문 <img src=x onerror=alert(1)>');
+ assert(await page.locator('#prompt-version-stable').evaluate(el=>el.readOnly));
+ assert.equal(await page.locator('#prompt-version-dialog img').count(),0);
+ assert.equal(await page.locator('#prompt-stable').inputValue(),unpublished);
+ await page.locator('#prompt-version-close').click();
+ await page.locator('#prompt-versions').selectOption('3');assert(await page.locator('#prompt-restore').isDisabled());
+ await page.locator('#prompt-view-version').click();await page.locator('#prompt-version-dialog').waitFor({state:'visible'});
+ assert.match(await page.locator('#prompt-version-meta').textContent(),/초안 저장/);await page.locator('#prompt-version-close').click();
+ await page.locator('#prompt-more-versions').click();await page.waitForFunction(()=>document.querySelector('#prompt-versions option[value="1"]'));
+ assert.equal(await page.locator('#prompt-versions').inputValue(),'3');assert.equal(await page.locator('#prompt-stable').inputValue(),unpublished);assert(await page.locator('#prompt-more-versions').isDisabled());
+ await page.locator('#prompt-versions').selectOption('1');await page.locator('#prompt-view-version').click();await page.locator('#prompt-version-dialog').waitFor({state:'visible'});
+ page.removeAllListeners('dialog');page.once('dialog',d=>d.dismiss());await page.locator('#prompt-version-load').click();assert.equal(await page.locator('#prompt-stable').inputValue(),unpublished);assert(await page.locator('#prompt-version-dialog').isVisible());
+ await page.setViewportSize({width:390,height:844});assert(await page.locator('#prompt-version-dialog').evaluate(el=>el.getBoundingClientRect().width<=window.innerWidth&&el.scrollWidth<=el.clientWidth));
+ page.once('dialog',d=>d.accept());await page.locator('#prompt-version-load').click();
+ assert.equal(await page.locator('#prompt-stable').inputValue(),'이전 안정형 v1 원문 <img src=x onerror=alert(1)>');
+ assert.equal(await page.locator('#prompt-results .prompt-result-row').count(),0);assert(await page.evaluate(()=>window.studio.hasUnsaved()));
+ assert.match(await page.locator('#prompt-status').textContent(),/v1을/);
+ assert.equal(await page.evaluate(()=>window.calls.filter(c=>['save','publish','rollback'].includes(c.action)).length),beforeWrites);
+ await page.evaluate(()=>window.versionError=true);await page.locator('#prompt-view-version').click();await page.waitForFunction(()=>document.getElementById('prompt-history-status').textContent.includes('찾을 수 없습니다'));
+ assert(!await page.locator('#prompt-version-dialog').isVisible());
+ await page.evaluate(()=>{window.versionError=false;window.deferVersion=true;});await page.locator('#prompt-view-version').click();await page.waitForFunction(()=>window.releaseVersion);
+ await page.evaluate(()=>{window.studio.clear();window.releaseVersion();});await page.waitForTimeout(50);
+ assert(!await page.locator('#prompt-version-dialog').isVisible());assert.equal(await page.locator('#prompt-version-stable').inputValue(),'');
  assert.deepEqual(errors,[]);
- console.log('PASS prompt studio: production defaults, unsaved A/B prompt delivery, continued history, automatic resets, published baseline, experimental none, save/publish and in-flight edit protection');
+ console.log('PASS prompt studio: production defaults, A/B history, version previews, draft history, older pages, plain text, unsaved protection, copy without publishing, narrow dialog, failed and stale reads');
 } finally {await browser.close();}

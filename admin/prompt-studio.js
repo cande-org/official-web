@@ -19,9 +19,11 @@ const members = {
   same: { id: 'stable2', nickname: '안정형 2', persona: 'stable' }
 };
 const labelTime = value => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+const versionAction = action => ({ seed: '최초 공개', save: '초안 저장', publish: '앱 공개', rollback: '되돌리기' })[action] ?? action;
 
 export function createPromptStudio(getClient) {
   let snapshot, loading = false, busy = false, changed = false, cases = [];
+  let generation = 0, versionTicket = 0, versionLoading = false, historyLoading = false, activeVersion = null;
   let histories = { published: [], custom: [] };
   let scenario = 'reply', memberMode = 'all';
   let productionSettings = { model: 'gpt-6-luna', reasoningEffort: 'low' };
@@ -38,7 +40,7 @@ export function createPromptStudio(getClient) {
     const { data, error } = await client.functions.invoke('admin-prompt-studio', { method: payload ? 'POST' : 'GET', ...(payload ? { body: payload } : {}) });
     if (error) {
       const code = error.context?.status;
-      throw Error(code === 429 ? '오늘의 테스트 한도 40건을 모두 사용했습니다.' : code === 409 ? '다른 관리자가 먼저 수정했습니다. 새로 불러온 뒤 다시 시도해 주세요.' : code === 403 ? '프롬프트 관리 권한이 없습니다.' : code === 413 ? '테스트 요청이 너무 큽니다. 대화를 초기화한 뒤 다시 시도해 주세요.' : code === 422 ? '금지한 되받기 말투가 검출돼 응답을 표시하지 않았습니다. 지침을 조정해 다시 테스트해 주세요.' : code === 400 ? '입력값을 확인해 주세요.' : '서버 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
+      throw Error(code === 429 ? '오늘의 테스트 한도 40건을 모두 사용했습니다.' : code === 409 ? '다른 관리자가 먼저 수정했습니다. 새로 불러온 뒤 다시 시도해 주세요.' : code === 403 ? '프롬프트 관리 권한이 없습니다.' : code === 404 ? '해당 프롬프트 버전을 찾을 수 없습니다.' : code === 413 ? '테스트 요청이 너무 큽니다. 대화를 초기화한 뒤 다시 시도해 주세요.' : code === 422 ? '금지한 되받기 말투가 검출돼 응답을 표시하지 않았습니다. 지침을 조정해 다시 테스트해 주세요.' : code === 400 ? '입력값을 확인해 주세요.' : '서버 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
     }
     return data;
   }
@@ -54,31 +56,75 @@ export function createPromptStudio(getClient) {
     }
     $('prompt-production-settings').textContent = `공개본은 운영과 같은 ${productionSettings.model} · 추론 ${productionSettings.reasoningEffort}로 테스트합니다. 편집 중 문구도 기본은 같은 설정이며, 다른 설정은 비교 실험에만 사용합니다.`;
     $('prompt-meta').textContent = `초안 v${snapshot.revision} · 앱 공개 v${snapshot.published_revision} · 마지막 공개 ${labelTime(snapshot.published_at)}`;
+    versionTicket++; versionLoading = false; activeVersion = null; $('prompt-version-dialog').close();
+    renderVersions();
+  }
+  function versionControls() {
+    const locked = busy || loading || versionLoading || historyLoading;
+    const selected = snapshot?.history.find(item => item.revision === Number($('prompt-versions').value));
+    $('prompt-versions').disabled = locked || !snapshot?.history.length;
+    $('prompt-view-version').disabled = locked || !selected;
+    $('prompt-restore').disabled = locked || !selected || selected.action === 'save';
+    $('prompt-more-versions').disabled = locked || !snapshot?.historyBeforeRevision;
+  }
+  function renderVersions(selectedRevision = $('prompt-versions').value) {
     const select = $('prompt-versions'); select.replaceChildren();
-    for (const item of snapshot.history.filter(item => ['seed', 'publish', 'rollback'].includes(item.action))) {
-      const option = make('option', `v${item.revision} · ${labelTime(item.created_at)}`); option.value = String(item.revision); select.append(option);
+    for (const item of snapshot.history) {
+      const option = make('option', `v${item.revision} · ${versionAction(item.action)} · ${labelTime(item.created_at)}`);
+      option.value = String(item.revision); select.append(option);
     }
+    if (snapshot.history.some(item => String(item.revision) === selectedRevision)) select.value = selectedRevision;
+    versionControls();
+  }
+  async function moreVersions() {
+    if (busy || loading || versionLoading || historyLoading || !snapshot?.historyBeforeRevision) return;
+    const session = generation, revision = snapshot.revision, selected = $('prompt-versions').value;
+    historyLoading = true; versionControls(); $('prompt-history-status').textContent = '이전 이력을 불러오는 중…';
+    try {
+      const page = await request({ action: 'history', beforeRevision: snapshot.historyBeforeRevision });
+      if (session !== generation || snapshot?.revision !== revision) return;
+      snapshot.history = [...new Map([...snapshot.history, ...page.history].map(item => [item.revision, item])).values()];
+      snapshot.historyBeforeRevision = page.historyBeforeRevision;
+      renderVersions(selected); $('prompt-history-status').textContent = page.historyBeforeRevision ? '이전 이력을 추가했습니다.' : '모든 버전 이력을 불러왔습니다.';
+    } catch (error) { if (session === generation) $('prompt-history-status').textContent = error.message; }
+    finally { if (session === generation) { historyLoading = false; versionControls(); } }
+  }
+  async function viewVersion() {
+    if (busy || loading || versionLoading || historyLoading || !$('prompt-versions').value) return;
+    const ticket = ++versionTicket;
+    versionLoading = true; versionControls(); $('prompt-history-status').textContent = '버전 내용을 불러오는 중…';
+    try {
+      const data = await request({ action: 'version', targetRevision: Number($('prompt-versions').value) });
+      if (ticket !== versionTicket || !snapshot) return;
+      activeVersion = data.version;
+      $('prompt-version-title').textContent = `v${activeVersion.revision} 프롬프트`;
+      $('prompt-version-meta').textContent = `${versionAction(activeVersion.action)} · ${labelTime(activeVersion.created_at)}`;
+      for (const key of Object.keys(fields)) $('prompt-version-' + key).value = activeVersion.guides[key];
+      $('prompt-version-dialog').showModal(); $('prompt-history-status').textContent = '';
+    } catch (error) { if (ticket === versionTicket) $('prompt-history-status').textContent = error.message; }
+    finally { if (ticket === versionTicket) { versionLoading = false; versionControls(); } }
   }
   async function load(force = false) {
     if (loading || busy || (changed && !force)) return;
-    loading = true; status('프롬프트를 불러오는 중…');
-    try { snapshot = await request(); resetConversation(); render(); status(''); }
-    catch (error) { status(error.message, true); }
-    finally { loading = false; }
+    const session = generation;
+    loading = true; versionControls(); status('프롬프트를 불러오는 중…');
+    try { const data = await request(); if (session !== generation) return; snapshot = data; resetConversation(); render(); status(''); }
+    catch (error) { if (session === generation) status(error.message, true); }
+    finally { if (session === generation) { loading = false; versionControls(); } }
   }
   async function write(action, targetRevision) {
-    if (busy || !snapshot) return;
+    if (busy || loading || versionLoading || historyLoading || !snapshot) return;
     const guides = draft();
     if (action !== 'rollback' && !isValid(guides)) { status('각 성향 지침을 20~1,200자로 작성해 주세요.', true); return; }
     if (action === 'publish' && !confirm('현재 입력창의 성향 지침을 앱에 공개할까요? 초안 저장 없이도 공개되며, 기존 방을 포함한 다음 새 메시지부터 적용됩니다.')) return;
     if (action === 'rollback' && !confirm(`공개 v${targetRevision}의 지침을 다시 앱에 적용할까요?`)) return;
-    busy = true; status(action === 'save' ? '초안 저장 중…' : '앱에 적용 중…');
+    busy = true; versionControls(); status(action === 'save' ? '초안 저장 중…' : '앱에 적용 중…');
     try {
       snapshot = await request({ action, revision: snapshot.revision, ...(action === 'rollback' ? { targetRevision } : { guides }) });
       if (action !== 'save') resetConversation();
       render(); status(action === 'save' ? '초안이 저장됐습니다. 앱에는 아직 반영되지 않았습니다.' : '새 버전이 앱의 다음 새 메시지부터 적용됩니다. 테스트 대화는 초기화했습니다.');
     } catch (error) { status(error.message, true); }
-    finally { busy = false; }
+    finally { busy = false; versionControls(); }
   }
   function resetConversation() {
     const first = selectedMembers()[0];
@@ -120,9 +166,10 @@ export function createPromptStudio(getClient) {
   }
   function setTestBusy(value) {
     for (const control of document.querySelectorAll('#prompts textarea, #prompts select, #prompts button')) control.disabled = value;
+    versionControls();
   }
   async function run() {
-    if (busy || !snapshot) return;
+    if (busy || loading || versionLoading || historyLoading || !snapshot) return;
     const guides = draft(), message = $('prompt-message').value.trim();
     if (!isValid(guides)) { testStatus('성향 지침은 각각 20~1,200자여야 합니다.', true); return; }
     if (!message || message.length > 1200) { testStatus('테스트 메시지를 1~1,200자로 입력해 주세요.', true); return; }
@@ -156,6 +203,20 @@ export function createPromptStudio(getClient) {
   $('prompt-refresh').onclick = () => { if (!changed || confirm('저장하지 않은 프롬프트 변경사항을 버릴까요?')) load(true); };
   $('prompt-publish').onclick = () => write('publish');
   $('prompt-restore').onclick = () => write('rollback', Number($('prompt-versions').value));
+  $('prompt-versions').onchange = versionControls;
+  $('prompt-view-version').onclick = viewVersion;
+  $('prompt-more-versions').onclick = moreVersions;
+  $('prompt-version-close').onclick = () => $('prompt-version-dialog').close();
+  $('prompt-version-dialog').onclose = () => { activeVersion = null; };
+  $('prompt-version-load').onclick = () => {
+    if (!activeVersion || busy || loading) return;
+    if (changed && !confirm('편집창의 저장하지 않은 내용을 선택한 버전으로 바꿀까요?')) return;
+    const version = activeVersion;
+    for (const [key, field] of Object.entries(fields)) field.value = version.guides[key];
+    changed = true; resetConversation(); $('prompt-version-dialog').close();
+    status(`v${version.revision}을 편집창으로 불러왔습니다. 저장 없이 테스트할 수 있고, 앱 반영은 ‘앱에 공개’를 눌러 주세요.`);
+    fields.stable.focus();
+  };
   $('prompt-scenario').onchange = event => { scenario = event.target.value; if (scenario !== 'custom') $('prompt-message').value = scenarios[scenario]; resetConversation(); };
   $('prompt-members').onchange = event => { memberMode = event.target.value; resetConversation(); };
   $('prompt-run').onclick = run;
@@ -166,5 +227,10 @@ export function createPromptStudio(getClient) {
     const link = make('a'); link.href = url; link.download = `persona-test-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   $('prompt-message').value = scenarios.reply;
-  return { load, clear: () => { snapshot = null; changed = false; settingsLoaded = false; resetConversation(); }, hasUnsaved: () => changed };
+  return { load, clear: () => {
+    generation++; versionTicket++; snapshot = null; changed = false; settingsLoaded = false; loading = false; versionLoading = false; historyLoading = false;
+    activeVersion = null; $('prompt-version-dialog').close(); $('prompt-versions').replaceChildren(); $('prompt-history-status').textContent = '';
+    for (const key of Object.keys(fields)) $('prompt-version-' + key).value = '';
+    versionControls(); resetConversation();
+  }, hasUnsaved: () => changed };
 }
