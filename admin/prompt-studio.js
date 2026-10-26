@@ -38,7 +38,7 @@ export function createPromptStudio(getClient) {
     const { data, error } = await client.functions.invoke('admin-prompt-studio', { method: payload ? 'POST' : 'GET', ...(payload ? { body: payload } : {}) });
     if (error) {
       const code = error.context?.status;
-      throw Error(code === 429 ? '오늘의 테스트 한도 40건을 모두 사용했습니다.' : code === 409 ? '다른 관리자가 먼저 수정했습니다. 새로 불러온 뒤 다시 시도해 주세요.' : code === 403 ? '프롬프트 관리 권한이 없습니다.' : code === 413 ? '테스트 요청이 너무 큽니다. 대화를 초기화한 뒤 다시 시도해 주세요.' : code === 400 ? '입력값을 확인해 주세요.' : '서버 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
+      throw Error(code === 429 ? '오늘의 테스트 한도 40건을 모두 사용했습니다.' : code === 409 ? '다른 관리자가 먼저 수정했습니다. 새로 불러온 뒤 다시 시도해 주세요.' : code === 403 ? '프롬프트 관리 권한이 없습니다.' : code === 413 ? '테스트 요청이 너무 큽니다. 대화를 초기화한 뒤 다시 시도해 주세요.' : code === 422 ? '금지한 되받기 말투가 검출돼 응답을 표시하지 않았습니다. 지침을 조정해 다시 테스트해 주세요.' : code === 400 ? '입력값을 확인해 주세요.' : '서버 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
     }
     return data;
   }
@@ -99,6 +99,11 @@ export function createPromptStudio(getClient) {
     const rate = response.model === 'gpt-6-sol' ? [2, 10] : [0.1, 0.5];
     const estimate = input || output ? ` · 최대 약 $${((input * rate[0] + output * rate[1]) / 1_000_000).toFixed(5)}` : '';
     card.append(make('p', `${response.model} · 추론 ${response.reasoningEffort} · ${response.durationMs}ms · 입력 ${input || '—'} / 출력 ${output || '—'} 토큰${estimate} · ${response.quotaUsed == null ? '모델 호출 없음' : `사용 ${response.quotaUsed}/40`}`, 'prompt-result-meta'));
+    if (response.voiceChecks?.cuteEligibleCount > 0) {
+      const candidate = response.result.messages?.find(item => item.memberId === response.voiceChecks.cuteMember);
+      card.append(make('p', candidate ? `이번 턴 애교 어미 후보: ${candidate.senderName} · 상황과 상위 지침이 우선합니다.` : '이번 턴은 평소 말투 · 허용된 애교 어미는 일부 턴에만 선택됩니다.', 'prompt-result-meta'));
+    }
+    if (response.voiceChecks?.removedOpeners > 0) card.append(make('p', `금지된 되받기 첫 문장 ${response.voiceChecks.removedOpeners}개를 정리했습니다.`, 'prompt-result-meta'));
     if (response.result.mode === 'safety') card.append(make('p', '안전 안내: ' + response.result.safetyMessage));
     else for (const item of response.result.messages) {
       const line = make('div', undefined, 'prompt-reply');

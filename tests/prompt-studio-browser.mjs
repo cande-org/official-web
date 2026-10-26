@@ -18,8 +18,9 @@ try {
    const body=options?.body;window.calls.push(structuredClone(body??{action:'read'}));
    if(!body)return{data:structuredClone(window.snapshot)};
    if(body.action==='test'){
+    if(window.voiceError)return{error:{context:{status:422}}};
     if(window.defer)await new Promise(resolve=>(window.releases??=[]).push(resolve));
-    const custom=body.variant==='custom';return {data:{revision:custom?3:2,model:body.model??'gpt-6-luna',reasoningEffort:body.reasoningEffort??'low',durationMs:10,quotaUsed:1,usage:{},result:{mode:'normal',messages:[{memberId:'stable',senderName:'안정형',content:custom?body.guides.stable:'공개 지침 응답'}]}}};
+    const custom=body.variant==='custom';return {data:{revision:custom?3:2,model:body.model??'gpt-6-luna',reasoningEffort:body.reasoningEffort??'low',durationMs:10,quotaUsed:1,usage:{},voiceChecks:{cuteEligibleCount:1,cuteMember:window.plainVoice?undefined:'stable',removedOpeners:window.removedEcho?1:0},result:{mode:'normal',messages:[{memberId:'stable',senderName:'안정형',content:custom?body.guides.stable:'공개 지침 응답'}]}}};
    }
    window.snapshot={...window.snapshot,draft:body.guides,revision:window.snapshot.revision+1,...(body.action==='publish'?{published_revision:window.snapshot.revision+1}:{})};return{data:structuredClone(window.snapshot)};
   }}};
@@ -43,6 +44,9 @@ try {
  await page.evaluate(()=>window.defer=true);await page.locator('#prompt-run').click();assert(await page.locator('#prompt-stable').isDisabled());assert(await page.locator('#prompt-reset').isDisabled());await page.waitForFunction(()=>window.releases?.length===2);await page.evaluate(()=>{window.defer=false;window.releases.forEach(resolve=>resolve());});await page.waitForFunction(()=>!document.getElementById('prompt-run').disabled);
  await page.locator('#prompt-scenario').selectOption('correction');await page.locator('#prompt-members').selectOption('anxious');await run();calls=await tests();
  assert(calls.at(-1).history.filter(m=>m.role==='assistant').every(m=>m.memberId==='anxious'));
+ assert.match(await page.locator('#prompt-results').textContent(),/애교 어미 후보/);
+ await page.evaluate(()=>{window.plainVoice=true;window.removedEcho=true;});await run();assert.match(await page.locator('#prompt-results').textContent(),/이번 턴은 평소 말투/);assert.match(await page.locator('#prompt-results').textContent(),/되받기 첫 문장 1개/);
+ await page.evaluate(()=>window.voiceError=true);await run();assert.match(await page.locator('#prompt-results').textContent(),/금지한 되받기 말투가 검출/);assert(!(await page.locator('#prompt-run').isDisabled()));
  assert.deepEqual(errors,[]);
  console.log('PASS prompt studio: production defaults, unsaved A/B prompt delivery, continued history, automatic resets, published baseline, experimental none, save/publish and in-flight edit protection');
 } finally {await browser.close();}
