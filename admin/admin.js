@@ -1,3 +1,4 @@
+import { createExitFeedback } from './exit-feedback.js';
 import { createChatKnowledge } from './chat-knowledge.js';
 import {localPages,renderPager,setPagerBusy,clearPager} from './pagination.js';
 import { createAdminRouter, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from './routing.js';
@@ -22,6 +23,7 @@ let announcements;
 let members;
 let chatHistory;
 let operations;
+let exitFeedback;
 const isOperationTab=tab=>['payments','ads','friends'].includes(tab);
 let legal;
 let support;
@@ -41,7 +43,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); exitFeedback?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -71,6 +73,7 @@ const pageMeta = {
   announcements: ['공지사항', '앱에 표시할 공지를 관리하세요.'],
   push: ['푸시 알림', '발송 이력을 확인하고 새 알림을 보내세요.'],
   legal: ['약관·정책', '문서 내용, 공개 버전과 시행일을 관리하세요.'],
+  'exit-feedback': ['탈퇴·해지 사유', '제출된 사유와 추가 의견을 유형·기간별로 확인하세요.'],
   support: ['문의·아이디어', '앱에서 접수된 문의와 아이디어, 첨부 사진을 확인하세요.'],
   chats: ['채팅 기록', '최신 메시지와 채팅방의 대화 흐름을 확인하세요.'],
   payments: ['결제 내역', '회원의 구매·구독 갱신과 환불 상태를 확인하세요.'],
@@ -111,7 +114,7 @@ async function applyRoute(route){
   if(!snapshot)return;
   closeRouteDialogs();selectTab(route.tab,{skipLoad:true});
   try{
-    const module=route.tab==='knowledge'?chatKnowledge:isOperationTab(route.tab)?operations.view(route.tab):route.tab==='chats'?chatHistory:route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
+    const module=route.tab==='exit-feedback'?exitFeedback:route.tab==='knowledge'?chatKnowledge:isOperationTab(route.tab)?operations.view(route.tab):route.tab==='chats'?chatHistory:route.tab==='legal'?legal:route.tab==='members'?members:route.tab==='support'?support:['announcements','push'].includes(route.tab)?announcements:null;
     if(module){module.setRoute?.(route);const loaded=await module.load();if((module===announcements||module===legal)&&loaded!==true)return;}
     else if(route.tab==='dashboard')await loadMetrics();
     else if(route.tab==='admins')await loadAdmins();
@@ -148,11 +151,11 @@ function selectTab(tab, options = {}) {
   $('page-title').textContent = pageMeta[tab][0];
   $('page-description').textContent = pageMeta[tab][1];
   $('breadcrumb-current').textContent = pageMeta[tab][0];
-  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge'].includes(tab);
-  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge'].includes(tab);
+  $('reload').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback'].includes(tab);
+  $('revision').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback'].includes(tab);
   if (menuOpen) { setMenu(false, false); $('page-title').focus({ preventScroll: true }); }
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge'].includes(tab);
+  $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); if(!options.skipLoad)void loadMetrics(); }
   if (tab === 'legal' && !options.skipLoad) void legal.load();
   if (tab === 'support' && !options.skipLoad) void support.load();
@@ -162,9 +165,10 @@ function selectTab(tab, options = {}) {
   if (tab === 'admins' && !options.skipLoad) void loadAdmins();
   if (tab === 'prompts' && !options.skipLoad) void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
+  if (tab === 'exit-feedback' && !options.skipLoad) void exitFeedback.load();
   if (tab === 'knowledge' && !options.skipLoad) void chatKnowledge.load();
   if (tab === 'credits' && !options.skipLoad) void creditPolicy.load();
-  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge']) $(name).hidden = name !== tab;
+  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -400,6 +404,7 @@ try {
   const authEntryUrl=location.href;
   client = createClient(config.url, config.key, { auth: { flowType: 'pkce', storage: prepareAuthStorage(localStorage, sessionStorage), storageKey: ADMIN_AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   announcements = createAnnouncements(() => client,rememberDetail);
+  exitFeedback = createExitFeedback(() => client);
   operations = createOperations(() => client,route=>router.go(route,{notify:false,check:false}));
   chatHistory = createChatHistory(() => client,route=>router.go({tab:'chats',...route},{notify:false,check:false}));
   support = createSupport(() => client,{onDetail:rememberDetail});

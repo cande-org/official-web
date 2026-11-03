@@ -1,5 +1,7 @@
 # Cande operations admin
 
+Exit feedback (2026-11-03): **탈퇴·해지 사유** at `/admin/exit-feedback` lists submitted reasons and optional comments, with inclusive KST dates (up to93 days), flow/reason/account-state filters, whole-range totals and numbered20/50-row pages. Includes consent-retained surveys after account deletion; existing deletion policy is unchanged. Submissions are not confirmed cancellation/deletion counts. Verified-admin-only `admin-exit-feedback` API, plain-text opinions, stale-request/sign-out cleanup. [Verification](../../mental/docs/admin-exit-feedback-20261103/README.md).
+
 `https://cande.fyi/admin` uses Supabase Google PKCE sign-in and the server's private `mb_content_admins` allowlist. The static page contains no privileged credentials. Every content/metrics API request verifies the real session and administrator membership. Sessions persist in localStorage; OAuth return routes are retained only in sessionStorage.
 
 - Dashboard: KST day/week (Monday)/month buckets, unique room creators and chat senders, signup/guest counts, turn outcomes, processing/notification queue status. A maximum 366-day inclusive range is accepted. Partial boundary weeks/months use the selected range only.

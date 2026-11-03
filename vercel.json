@@ -73,6 +73,10 @@
     {
       "source": "/admin/knowledge/:path*",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/exit-feedback/:path*",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [
