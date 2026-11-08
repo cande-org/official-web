@@ -1,5 +1,7 @@
 # Cande operations admin
 
+Hourly metrics (2026-11-09): separate calendar day/week/month/custom ranges from hour/day/week/month display grains. Default today in KST with hourly chart/detail rows; previous/next moves the selected period. Weekly/monthly hourly views retain each date and hour. Range unique-user cards and day-based retention cohorts keep their existing definitions. Uses the private hourly RPC through `admin-metrics?grain=hour`; all/member/guest filters and legacy daily APIs are preserved. [Verification](../../mental/docs/admin-hourly-metrics-20261109/README.md).
+
 Exit feedback (2026-11-03): **탈퇴·해지 사유** at `/admin/exit-feedback` lists submitted reasons and optional comments, with inclusive KST dates (up to93 days), flow/reason/account-state filters, whole-range totals and numbered20/50-row pages. Includes consent-retained surveys after account deletion; existing deletion policy is unchanged. Submissions are not confirmed cancellation/deletion counts. Verified-admin-only `admin-exit-feedback` API, plain-text opinions, stale-request/sign-out cleanup. [Verification](../../mental/docs/admin-exit-feedback-20261103/README.md).
 
 `https://cande.fyi/admin` uses Supabase Google PKCE sign-in and the server's private `mb_content_admins` allowlist. The static page contains no privileged credentials. Every content/metrics API request verifies the real session and administrator membership. Sessions persist in localStorage; OAuth return routes are retained only in sessionStorage.

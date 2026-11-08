@@ -15,6 +15,7 @@ import { createLegalDocuments } from './legal.js';
 import { renderTrend, renderRetention, clearCharts, disposeChart, resizeCharts } from './charts.js';
 import { createCreditPolicy } from './credit-policy.js';
 import { createClient } from '@supabase/supabase-js';
+import { todayKst, metricPeriod, shiftMetricPeriod, metricBucketLabel } from './metric-period.js';
 const $ = (id) => document.getElementById(id);
 let contentLists;
 let creditPolicy;
@@ -361,6 +362,7 @@ function renderGrowth(data) {
   ],false));conversion.append(wrap,node('p',c.medianFirstChatSeconds==null?'첫 채팅까지 중앙시간: — 관찰 대상 없음':`첫 채팅까지 중앙시간: ${(c.medianFirstChatSeconds/60).toLocaleString('ko-KR',{maximumFractionDigits:1})}분 · 7일 내 전환한 ${people} 기준`));
   metricCards('growth-retention',`${guest?'게스트 시작':'가입'} 코호트 리텐션`,['d1','d7','d30'].map(key=>[key.toUpperCase(),c[key].eligible ? (100*c[key].retained/c[key].eligible).toFixed(1)+'%' : '—',c[key].eligible ? `${number(c[key].retained)} / ${number(c[key].eligible)}명 · 해당 날짜 관찰 완료` : '관찰 대기 또는 가입 대상 없음']),`${guest?'게스트를 시작':'가입'}한 날을 D0으로 보고 정확히 1·7·30일 뒤 ${guest?'비로그인':member?'로그인':'전체'} 상태로 서버 활동을 한 비율입니다. 끝나지 않은 날짜는 분모에서 제외합니다.`);
   const retention=node('div',null,'table-scroll');retention.tabIndex=0;retention.setAttribute('aria-label',`${guest?'게스트 시작':'가입'} 코호트별 리텐션`);
+  if(data.cohortGrain==='day')retention.append(node('p','시간별 조회에서도 리텐션 코호트는 가입·게스트 시작일 기준으로 표시합니다.','metric-note'));
   if(data.cohorts.buckets.length)retention.append(metricTable([guest?'게스트 시작 기간':'가입 기간',guest?'게스트':'가입','D1','D7','D30','7일 채팅','7일 구매','7일 관찰 대기'],data.cohorts.buckets.map(b=>[b.date,number(b.members),ratio(b.d1.retained,b.d1.eligible),ratio(b.d7.retained,b.d7.eligible),ratio(b.d30.retained,b.d30.eligible),ratio(b.chatConverted7d,b.eligible7d),ratio(b.purchaseConverted7d,b.eligible7d),number(b.pending7d)])));
   else retention.append(node('p',`수집 시작 이후의 ${guest?'게스트 시작':'가입'} 코호트가 아직 없습니다. 날짜가 쌓이면 표시됩니다.`));
   disposeChart('retention-chart');
@@ -377,9 +379,27 @@ function renderGrowth(data) {
 }
 
 let metricsRequest = 0;
-const todayKst = () => new Date(Date.now() + 9*3600000).toISOString().slice(0,10);
 $('metric-end').value = todayKst();
-$('metric-start').value = new Date(Date.parse(todayKst()) - 29*86400000).toISOString().slice(0,10);
+$('metric-start').value = todayKst();
+function setMetricPeriod(anchor = $('metric-start').value || todayKst()) {
+  const period = $('metric-period').value;
+  $('metric-end').readOnly = period !== 'custom';
+  if(period !== 'custom') {
+    const range = metricPeriod(period,anchor);
+    if(range) { $('metric-start').value=range.start; $('metric-end').value=range.end; }
+  }
+}
+setMetricPeriod();
+$('metric-period').onchange = () => { setMetricPeriod(); void loadMetrics(); };
+$('metric-start').onchange = () => { setMetricPeriod(); void loadMetrics(); };
+$('metric-end').onchange = () => loadMetrics();
+$('metric-grain').onchange = () => loadMetrics();
+for(const [id,direction] of [['metric-prev',-1],['metric-next',1]]) $(id).onclick = () => {
+  const start=$('metric-start').value,end=$('metric-end').value;
+  if(!start || !end || end<start) return;
+  const range=shiftMetricPeriod($('metric-period').value,start,end,direction);
+  $('metric-start').value=range.start; $('metric-end').value=range.end; void loadMetrics();
+};
 $('metric-refresh').onclick = () => loadMetrics();
 $('metric-audience').onchange = () => loadMetrics();
 async function loadMetrics() {
@@ -402,13 +422,16 @@ async function loadMetrics() {
     const rows = data.buckets.map(b=>({...b,...growthByDate.get(b.date)}));
     disposeChart('trend-chart');
     const heading = node('div',null,'chart-heading');
-    heading.append(node('h3',`${audience==='guest'?'게스트 시작':'가입'}과 활성 사용자 추이`),node('span',`${start} — ${end}`));
+    const unit = {hour:'시간별',day:'일별',week:'주별',month:'월별'}[grain];
+    heading.append(node('h3',`${audience==='guest'?'게스트 시작':'가입'}과 활성 사용자 추이`),node('span',`${start} — ${end} · ${unit} · KST`));
     const chart = node('div',null,'echart trend-chart'); chart.id = 'trend-chart';
     $('metric-chart').replaceChildren(heading,chart);
-    renderTrend(rows, audience);
+    renderTrend(rows, audience, grain);
+    if(grain==='hour') $('metric-chart').append(node('p','각 날짜의 1시간 구간별 집계입니다. 고유 이용자는 구간마다 중복을 제거하며, 기간 전체 인원은 요약 카드에서 확인할 수 있습니다.','chart-note'));
     if (!rows.some(b => (audience==='guest'?b.guests:b.members) > 0)) $('metric-chart').append(node('p',`선택 기간에 ${audience==='guest'?'새 게스트 시작':'신규 가입'}이 없습니다.`,'chart-note'));
-    const columns = [['date','기간 시작'],['activeUsers','활성 유저'],['returningUsers','재방문 유저'],['purchases','구매 건'],['buyers','구매 유저'],['adViews','광고 완료'],['adViewers','광고 유저'],['members','가입'],['guests','게스트 시작'],['rooms','생성 방'],['roomUsers','방 생성 유저'],['chatUsers','채팅 유저'],['memberChatUsers','회원 채팅 유저'],['guestChatUsers','게스트 채팅 유저'],['turns','전송'],['succeeded','응답 성공'],['failed','실패']];
-    $('metric-table').replaceChildren(metricTable(columns.map(([,label])=>label),rows.map(b=>columns.map(([key])=>key==='date'?b[key]:Number(b[key]).toLocaleString('ko-KR')))));
+    const columns = [['date',grain==='hour'?'시간 (KST)':'기간 시작'],['activeUsers','활성 유저'],['returningUsers','재방문 유저'],['purchases','구매 건'],['buyers','구매 유저'],['adViews','광고 완료'],['adViewers','광고 유저'],['members','가입'],['guests','게스트 시작'],['rooms','생성 방'],['roomUsers','방 생성 유저'],['chatUsers','채팅 유저'],['memberChatUsers','회원 채팅 유저'],['guestChatUsers','게스트 채팅 유저'],['turns','전송'],['succeeded','응답 성공'],['failed','실패']];
+    $('metric-detail-title').textContent = `${unit} 상세 지표`;
+    $('metric-table').replaceChildren(metricTable(columns.map(([,label])=>label),rows.map(b=>columns.map(([key])=>key==='date'?metricBucketLabel(b[key],grain):Number(b[key]).toLocaleString('ko-KR')))));
     const time = value => value ? new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}) : '아직 처리 전';
     $('metric-status').textContent = `${audience==='member'?'로그인':audience==='guest'?'비로그인':'전체'} 이용자 · 최근 집계 ${time(data.lastProcessedAt)} · 수집 시작 ${time(data.trackingStartedAt)} · 전체 운영 현황: 집계 대기 ${data.pendingEvents}건 · 알림 대기 ${data.pendingNotifications}건 / 실패 ${data.failedNotifications}건`;
   } catch(error) { if(generation===authGeneration && ticket===metricsRequest){$('metric-status').textContent=error.message;clearMetrics();} }

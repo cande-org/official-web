@@ -2,6 +2,7 @@ import { init, use } from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, AriaComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
+import { metricBucketLabel } from './metric-period.js';
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, AriaComponent, SVGRenderer]);
 const charts = new Map();
@@ -25,15 +26,16 @@ export function clearCharts() { for (const id of [...charts.keys()]) disposeChar
 export function resizeCharts() { for (const { chart } of charts.values()) if (chart.getDom().clientWidth) chart.resize(); }
 const axis = { axisLine: { show: false }, axisTick: { show: false }, axisLabel: { fontSize: 11, color: '#737d8c' } };
 const tooltip = { trigger: 'axis', confine: true, backgroundColor: '#fff', borderColor: '#e5e8ef', padding: [12,16], textStyle: { fontFamily: font, fontSize: 12, color: '#333b4b' }, extraCssText: 'box-shadow:0 6px 24px rgba(24,35,58,.09);border-radius:8px' };
-export function renderTrend(rows, audience = 'all') {
+export function renderTrend(rows, audience = 'all', grain = 'day') {
   const extended = rows.length > 35;
+  const singleDay = rows.length > 0 && rows[0].date.slice(0,10) === rows.at(-1).date.slice(0,10);
   const acquisition = audience==='guest'?'게스트 시작':'신규 가입';
   mount('trend-chart', {
     color: [ink, light],
     tooltip: { ...tooltip, valueFormatter: value => `${integer(value)}명` },
     legend: { data: ['활성 사용자',acquisition], top: 0, right: 0, itemWidth: 14, itemHeight: 8, itemGap: 20, textStyle: { fontFamily: font, fontSize: 11, color:'#687284' } },
     grid: { left: 42, right: 16, top: 52, bottom: extended ? 72 : 32 },
-    xAxis: { ...axis, type: 'category', data: rows.map(b => b.date), axisLabel: { ...axis.axisLabel, hideOverlap: true, formatter: value => value.slice(5).replace('-','.') } },
+    xAxis: { ...axis, type: 'category', data: rows.map(b => b.date), axisLabel: { ...axis.axisLabel, hideOverlap: true, formatter: value => metricBucketLabel(value,grain,true,singleDay) } },
     yAxis: { ...axis, type: 'value', min: 0, minInterval: 1, splitLine: { lineStyle: { color: '#edf0f5', type: 'dashed' } } },
     dataZoom: extended ? [{ type: 'slider', bottom: 6, height: 20, borderColor: '#e8ebf1', fillerColor:'#e4e9f6', handleStyle:{color:ink}, textStyle:{fontSize:10}, start: Math.max(0,100-35/rows.length*100), end:100 }] : [],
     series: [
