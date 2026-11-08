@@ -27,7 +27,7 @@ try {
    if(body.action==='test'){
     if(window.voiceError)return{error:{context:{status:422}}};
     if(window.defer)await new Promise(resolve=>(window.releases??=[]).push(resolve));
-    const custom=body.variant==='custom';return {data:{revision:custom?3:2,model:body.model??'gpt-6-luna',reasoningEffort:body.reasoningEffort??'low',durationMs:10,quotaUsed:1,usage:{},voiceChecks:{cuteEligibleCount:1,cuteMember:window.plainVoice?undefined:'stable',removedOpeners:window.removedEcho?1:0},result:{mode:'normal',messages:[{memberId:'stable',senderName:'안정형',content:custom?body.guides.stable:'공개 지침 응답'}]}}};
+    const custom=body.variant==='custom';return {data:{revision:custom?3:2,model:body.model??window.snapshot.productionSettings.model,reasoningEffort:body.reasoningEffort??'low',durationMs:10,quotaUsed:1,usage:window.deepseekUsage??{},voiceChecks:{cuteEligibleCount:1,cuteMember:window.plainVoice?undefined:'stable',removedOpeners:window.removedEcho?1:0},result:{mode:'normal',messages:[{memberId:'stable',senderName:'안정형',content:custom?body.guides.stable:'공개 지침 응답'}]}}};
    }
    window.snapshot={...window.snapshot,draft:body.guides,revision:window.snapshot.revision+1,...(body.action==='publish'?{published_revision:window.snapshot.revision+1}:{})};return{data:structuredClone(window.snapshot)};
   }}};
@@ -82,6 +82,13 @@ try {
  await page.evaluate(()=>{window.versionError=false;window.deferVersion=true;});await page.locator('#prompt-view-version').click();await page.waitForFunction(()=>window.releaseVersion);
  await page.evaluate(()=>{window.studio.clear();window.releaseVersion();});await page.waitForTimeout(50);
  assert(!await page.locator('#prompt-version-dialog').isVisible());assert.equal(await page.locator('#prompt-version-stable').inputValue(),'');
+ await page.evaluate(async()=>{window.deferVersion=false;window.voiceError=false;window.snapshot.productionSettings.model='deepseek-flash';window.deepseekUsage={prompt_tokens:1000,completion_tokens:1000};window.studio.clear();await window.studio.load();});
+ assert.equal(await page.locator('#prompt-model').inputValue(),'deepseek-flash');
+ assert.equal(await page.locator('#prompt-model option[value="deepseek-flash"]').count(),1);
+ assert.match(await page.locator('#prompt-production-settings').textContent(),/deepseek-flash · 추론 low/);
+ await run();calls=await tests();assert.equal(calls.at(-1).model,'deepseek-flash');
+ assert.match(await page.locator('#prompt-results').textContent(),/최대 약 \$0\.00150/);
+ await page.locator('#prompt-model').selectOption('gpt-6-luna');await run();calls=await tests();assert.equal(calls.at(-1).model,'gpt-6-luna');
  assert.deepEqual(errors,[]);
  console.log('PASS prompt studio: production defaults, A/B history, version previews, draft history, older pages, plain text, unsaved protection, copy without publishing, narrow dialog, failed and stale reads');
 } finally {await browser.close();}

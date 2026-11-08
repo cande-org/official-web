@@ -49,6 +49,11 @@ export function createPromptStudio(getClient) {
     for (const [key, field] of Object.entries(fields)) field.value = snapshot.draft[key];
     changed = false;
     productionSettings = snapshot.productionSettings ?? productionSettings;
+    const modelSelect = $('prompt-model');
+    if (['deepseek-flash', 'gpt-6-luna', 'gpt-6-sol'].includes(productionSettings.model) && !Array.from(modelSelect.options).some(option => option.value === productionSettings.model)) {
+      const option = make('option', productionSettings.model);
+      option.value = productionSettings.model; modelSelect.append(option);
+    }
     if (!settingsLoaded) {
       $('prompt-model').value = productionSettings.model;
       $('prompt-reasoning').value = productionSettings.reasoningEffort;
@@ -142,8 +147,9 @@ export function createPromptStudio(getClient) {
     const card = make('article', undefined, 'prompt-result-card'); card.append(make('h3', title));
     if (response.error) { card.append(make('p', response.error, 'error')); return card; }
     const input = Number(response.usage?.prompt_tokens ?? 0), output = Number(response.usage?.completion_tokens ?? 0);
-    const rate = response.model === 'gpt-6-sol' ? [2, 10] : [0.1, 0.5];
-    const estimate = input || output ? ` · 최대 약 $${((input * rate[0] + output * rate[1]) / 1_000_000).toFixed(5)}` : '';
+    // DeepSeek uses peak, uncached rates as an upper estimate (2026-11-08).
+    const rate = ({ 'deepseek-flash': [0.3, 1.2], 'gpt-6-luna': [0.1, 0.5], 'gpt-6-sol': [2, 10] })[response.model];
+    const estimate = rate && (input || output) ? ` · 최대 약 $${((input * rate[0] + output * rate[1]) / 1_000_000).toFixed(5)}` : '';
     card.append(make('p', `${response.model} · 추론 ${response.reasoningEffort} · ${response.durationMs}ms · 입력 ${input || '—'} / 출력 ${output || '—'} 토큰${estimate} · ${response.quotaUsed == null ? '모델 호출 없음' : `사용 ${response.quotaUsed}/40`}`, 'prompt-result-meta'));
     if (response.voiceChecks?.cuteEligibleCount > 0) {
       const candidate = response.result.messages?.find(item => item.memberId === response.voiceChecks.cuteMember);
