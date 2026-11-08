@@ -1,7 +1,12 @@
 // Data-only previews. Uploaded files are validated again by the server.
 export function createAnimationPackages({getClient,getDraft,stage,onError}) {
  const $=id=>document.getElementById(id);
- let packages=[],generation=0,previewTicket=0,pack=null,loadedHash=null,images={},step=0,playing=false,uploading=false;
+ let packages=[],generation=0,previewTicket=0,pack=null,requestedKey=null,previewDescriptor=null,images={},step=0,playing=false,uploading=false,queuedTap=false,autoplayRequested=false,demoTimer=null;
+ const bundled = theme => ({id:`${theme}-original-v1`,name:theme==='pepero'?'빼빼로':'포춘쿠키',url:`/assets/animations/${theme}.animation.json`,bundled:true});
+ const selection = () => getDraft()?.fortuneAnimation ?? bundled(getDraft()?.fortuneTheme==='pepero'?'pepero':'cookie');
+ const previewKey = descriptor => descriptor.bundled?descriptor.url:descriptor.sha256;
+ const readyMessage = '그림을 두 번 누르거나 더블클릭하세요. ‘전체 미리보기 재생’으로도 확인할 수 있습니다. 미리보기는 무음입니다.';
+ function controls(loading=false){$('animation-play').disabled=!pack;$('animation-play-all').disabled=!pack||playing;$('animation-replay').disabled=loading;$('animation-play').setAttribute('aria-busy',String(playing||loading));}
  function options() {
   const selected=getDraft()?.fortuneAnimation;
   const values=[...packages];
@@ -11,20 +16,25 @@ export function createAnimationPackages({getClient,getDraft,stage,onError}) {
   $('animation-source').value=selected||$('animation-source').value==='remote'?'remote':'bundled';
   $('animation-package').required=$('animation-source').value==='remote';
   $('animation-uploaded-fields').hidden=!selected&&$('animation-source').value!=='remote';
-  $('animation-preview').hidden=!selected;
-  $('animation-details').textContent=selected?`${selected.name} · ${(selected.bytes/1024).toFixed(0)}KB · 버전 ${selected.sha256.slice(0,8)}`:'';
  }
- async function preview(descriptor) {
-  const ticket=++previewTicket;pack=null;loadedHash=null;step=0;playing=false;
+ async function preview(descriptor,{autoplay=false}={}) {
+  if(previewKey(descriptor)===requestedKey){if(autoplay){if(pack)void playAll();else autoplayRequested=true;}return;}
+  clearTimeout(demoTimer);demoTimer=null;
+  const ticket=++previewTicket;pack=null;requestedKey=previewKey(descriptor);previewDescriptor=descriptor;step=0;playing=false;queuedTap=false;autoplayRequested=autoplay;
+  $('animation-preview').hidden=false;$('animation-caption').textContent='';
+  $('animation-details').textContent=descriptor.bundled?`${descriptor.name} · 앱 기본 애니메이션 미리보기`:`${descriptor.name} · ${(descriptor.bytes/1024).toFixed(0)}KB · 버전 ${descriptor.sha256.slice(0,8)}`;
+  $('animation-canvas').getContext('2d').clearRect(0,0,336,255);controls(true);
   $('animation-preview-status').textContent='미리보기를 불러오는 중…';
-  if(!descriptor){$('animation-preview').hidden=true;return;}
   try {
    const response=await fetch(descriptor.url,{cache:'force-cache'});
    if(!response.ok)throw Error();
    const bytes=new Uint8Array(await response.arrayBuffer());
-   if(bytes.length!==descriptor.bytes||bytes.length>8388608)throw Error();
-   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
-   if(hash!==descriptor.sha256)throw Error();
+   if(bytes.length>8388608)throw Error();
+   if(!descriptor.bundled){
+    if(bytes.length!==descriptor.bytes)throw Error();
+    const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
+    if(hash!==descriptor.sha256)throw Error();
+   }
    const value=JSON.parse(new TextDecoder().decode(bytes));
    if(value.schemaVersion!==1||value.stages?.length!==7||value.id!==descriptor.id||value.name!==descriptor.name)throw Error();
    const decoded={};
@@ -32,11 +42,12 @@ export function createAnimationPackages({getClient,getDraft,stage,onError}) {
     const image=new Image();image.src='data:image/png;base64,'+a.base64;await image.decode();decoded[id]=image;
    }
    if(ticket!==previewTicket)return;
-   images=decoded;pack=value;loadedHash=descriptor.sha256;$('animation-preview').hidden=false;
+   images=decoded;pack=value;
    $('animation-caption').textContent=value.caption;
-   $('animation-preview-status').textContent='그림을 두 번 눌러 확인하세요. 미리보기는 무음입니다.';
-   draw(0,0,1);
-  }catch{if(ticket===previewTicket)$('animation-preview-status').textContent='미리보기를 불러오지 못했습니다. 파일과 연결 상태를 확인하세요.';}
+   $('animation-preview-status').textContent=readyMessage;
+   draw(0,0,1);controls();
+   if(autoplayRequested)void playAll();
+  }catch{if(ticket===previewTicket){pack=null;requestedKey=null;controls();$('animation-preview-status').textContent='미리보기를 불러오지 못했습니다. 파일과 연결 상태를 확인한 뒤 ‘미리보기 다시 시작’을 눌러 주세요.';}}
  }
  function draw(from,to,t){
   const canvas=$('animation-canvas'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,336,255);
@@ -58,15 +69,29 @@ export function createAnimationPackages({getClient,getDraft,stage,onError}) {
   if(ticket!==previewTicket)return;
   await new Promise(resolve=>{let start;function frame(now){if(ticket!==previewTicket){resolve();return;}start??=now;const t=Math.min(1,(now-start)/s.durationMs);draw(from,to,ease(t,s.curve));if(t<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame);});
  }
- $('animation-play').onclick=async()=>{
-  if(!pack||playing||step===2)return;
-  playing=true;const ticket=previewTicket;
-  try{for(const index of step===0?[1,2,3]:[4,5,6]){await animate(index-1,index,ticket);if(ticket!==previewTicket)return;}step++;$('animation-preview-status').textContent=step===1?'한 번 더 눌러 보세요.':'미리보기 완료 · 앱에서는 운세와 광고·구매 버튼으로 이어집니다.';}
-  finally{if(ticket===previewTicket)playing=false;}
+ async function advance(){
+  if(!pack||step===2)return;
+  if(playing){if(step===0)queuedTap=true;return;}
+  playing=true;const ticket=previewTicket;controls();
+  try{
+   do{
+    for(const index of step===0?[1,2,3]:[4,5,6]){await animate(index-1,index,ticket);if(ticket!==previewTicket)return;}
+    step++;$('animation-preview-status').textContent=step===1?'한 번 더 눌러 보세요.':'미리보기 완료 · 앱에서는 운세와 광고·구매 버튼으로 이어집니다.';
+   }while(step===1&&queuedTap);
+  }finally{if(ticket===previewTicket){playing=false;queuedTap=false;controls();}}
+ }
+ function reset(){clearTimeout(demoTimer);demoTimer=null;previewTicket++;step=0;playing=false;queuedTap=false;autoplayRequested=false;if(pack){draw(0,0,1);$('animation-preview-status').textContent=readyMessage;}controls();}
+ async function playAll(){if(!pack)return;if(playing){if(step===0)queuedTap=true;return;}reset();queuedTap=true;await advance();}
+ $('animation-play').onclick=()=>{void advance();};
+ $('animation-play-all').onclick=()=>{void playAll();};
+ $('animation-replay').onclick=()=>{if(pack)reset();else void preview(previewDescriptor??selection());};
+ for(const button of document.querySelectorAll('[data-animation-demo]'))button.onclick=()=>{
+  clearTimeout(demoTimer);const current=generation;
+  // Let a double-click finish before moving its target out of the viewport.
+  demoTimer=setTimeout(()=>{demoTimer=null;if(current!==generation||$('fortune').hidden)return;$('animation-preview').hidden=false;$('animation-canvas').scrollIntoView({block:'center'});void preview(bundled(button.dataset.animationDemo),{autoplay:true});},300);
  };
- $('animation-replay').onclick=()=>{previewTicket++;step=0;playing=false;if(pack){draw(0,0,1);$('animation-preview-status').textContent='그림을 두 번 눌러 확인하세요. 미리보기는 무음입니다.';}};
  $('animation-source').onchange=()=>{
-  if($('animation-source').value==='bundled'){stage(null);options();void preview(null);}
+  if($('animation-source').value==='bundled'){stage(null);options();void preview(selection());}
   else{$('animation-uploaded-fields').hidden=false;$('animation-package').required=true;$('animation-package').focus();}
  };
  $('animation-package').onchange=()=>{const p=packages.find(p=>p.sha256===$('animation-package').value);if(!p)return;stage(p);options();void preview(p);};
@@ -89,8 +114,8 @@ export function createAnimationPackages({getClient,getDraft,stage,onError}) {
  };
  return {
   isBusy(){return uploading;},
-  render(published){options();const d=getDraft()?.fortuneAnimation;if(d&&published?.sha256===d.sha256)$('animation-upload-status').textContent='현재 앱에 공개된 애니메이션입니다.';if(d?.sha256!==loadedHash){void preview(d);}},
-  async load(){const current=generation;try{const {data,error}=await getClient().functions.invoke('admin-animation',{method:'GET'});if(current!==generation)return;if(error)throw Error('업로드 목록을 불러오지 못했습니다.');packages=data.packages;options();}catch(e){if(current===generation)onError(e.message);}},
-  clear(){generation++;previewTicket++;packages=[];pack=null;loadedHash=null;images={};step=0;playing=false;uploading=false;$('animation-source').value='bundled';$('animation-package').required=false;$('animation-upload').value='';$('animation-upload').disabled=false;$('animation-upload-status').textContent='';$('animation-preview').hidden=true;},
+  render(published){options();const d=getDraft()?.fortuneAnimation;if(d&&published?.sha256===d.sha256)$('animation-upload-status').textContent='현재 앱에 공개된 애니메이션입니다.';if(!$('fortune').hidden)void preview(selection());},
+  async load(){const current=generation;void preview(selection());try{const {data,error}=await getClient().functions.invoke('admin-animation',{method:'GET'});if(current!==generation)return;if(error)throw Error('업로드 목록을 불러오지 못했습니다.');packages=data.packages;options();}catch(e){if(current===generation)onError(e.message);}},
+  clear(){clearTimeout(demoTimer);demoTimer=null;generation++;previewTicket++;packages=[];pack=null;requestedKey=null;previewDescriptor=null;images={};step=0;playing=false;queuedTap=false;autoplayRequested=false;uploading=false;$('animation-source').value='bundled';$('animation-package').required=false;$('animation-upload').value='';$('animation-upload').disabled=false;$('animation-upload-status').textContent='';$('animation-preview-status').textContent='';$('animation-caption').textContent='';$('animation-canvas').getContext('2d').clearRect(0,0,336,255);controls();$('animation-preview').hidden=true;},
  };
 }

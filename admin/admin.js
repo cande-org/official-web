@@ -238,7 +238,7 @@ function renderFortuneSelection() {
   $('fortune-selected').textContent = `기본 버전: ${selected === 'pepero' ? '빼빼로' : '포춘쿠키'}`;
   document.querySelectorAll('[data-fortune]').forEach(e => e.classList.toggle('selected', e.dataset.fortune === selected));
 }
-$('fortune-theme').onchange = e => { snapshot.draft.fortuneTheme = e.target.value; markDirty(); renderFortuneSelection(); };
+$('fortune-theme').onchange = e => { snapshot.draft.fortuneTheme = e.target.value; markDirty(); renderFortuneSelection(); animationPackages.render(snapshot.publishedFortuneAnimation); };
 $('payment-notice').oninput = (e) => { snapshot.draft.paymentNotice = e.target.value; markDirty(); };
 $('add-faq').onclick = () => contentLists.addFaq();
 document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => router.go({tab:b.dataset.tab,id:null,version:null}));

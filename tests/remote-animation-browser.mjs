@@ -49,8 +49,9 @@ try{
  assert.equal(await page.locator('#fortune-published').innerText(),'포춘쿠키');
  const before=(await (await fetch(origin+'/state')).json()).published_revision;
  await shot('02-uploaded-draft');
- await page.locator('#animation-play').click();await page.waitForFunction(()=>document.querySelector('#animation-preview-status').textContent.includes('한 번 더'));
- await page.locator('#animation-play').click();await page.waitForFunction(()=>document.querySelector('#animation-preview-status').textContent.includes('미리보기 완료'));
+ const cookieIdle=await page.locator('#animation-canvas').evaluate(c=>c.toDataURL());
+ await page.locator('#animation-play').dblclick();await page.waitForFunction(()=>document.querySelector('#animation-preview-status').textContent.includes('미리보기 완료'));
+ assert.notEqual(await page.locator('#animation-canvas').evaluate(c=>c.toDataURL()),cookieIdle);
  await page.locator('#form button[type=submit]').click();await page.waitForFunction(()=>document.querySelector('#dirty').textContent==='저장된 초안');
  assert.equal((await (await fetch(origin+'/state')).json()).published_revision,before);
  await page.reload();await page.locator('#fortune').waitFor({state:'visible'});
@@ -63,8 +64,10 @@ try{
  await page.waitForFunction(()=>document.querySelector('#animation-upload-status').textContent.includes('업로드 완료'));
  await page.waitForFunction(()=>document.querySelector('#animation-caption').textContent.includes('원격으로'));
  assert.equal(await page.locator('#fortune-published').innerText(),'포춘쿠키');
- await page.locator('#animation-play').click();await page.waitForFunction(()=>document.querySelector('#animation-preview-status').textContent.includes('한 번 더'));
- await page.locator('#animation-play').click();await page.waitForFunction(()=>document.querySelector('#animation-preview-status').textContent.includes('미리보기 완료'));
+ await page.locator('#animation-play-all').click();await page.waitForFunction(()=>document.querySelector('#animation-preview-status').textContent.includes('미리보기 완료'));
+ await page.locator('[data-animation-demo=cookie]').dblclick();await page.waitForFunction(()=>document.querySelector('#animation-caption').textContent==='포춘쿠키를 깨보세요!'&&document.querySelector('#animation-preview-status').textContent.includes('미리보기 완료'));
+ assert.equal(await page.locator('#animation-source').inputValue(),'remote');
+ assert.equal((await (await fetch(origin+'/state')).json()).draft.fortuneAnimation.id,'cookie-original-v1');
  await page.locator('#publish').click();await page.waitForFunction(()=>document.querySelector('#fortune-published').textContent==='빼빼로 · 원격');
  await shot('04-remote-published');
  const live=await (await fetch(origin+'/app-content')).json();
