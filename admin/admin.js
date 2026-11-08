@@ -68,6 +68,7 @@ const pageMeta = {
   credits: ['무료 대화권', '신규 지급과 매일 무료 충전의 기준 횟수를 설정하세요.'],
   products: ['상점 상품', '상품의 노출, 순서와 소개를 관리하세요.'],
   faqs: ['자주 묻는 질문', '사용자가 궁금해하는 질문과 답변을 관리하세요.'],
+  fortune: ['포춘쿠키·빼빼로', '대화권 소진 시 표시할 버전을 선택하세요.'],
   notice: ['결제 안내', '상점 하단에 표시되는 결제 안내를 편집하세요.'],
   prompts: ['프롬프트 실험실', '세 친구의 성향을 다듬고 실제 응답을 비교하세요.'],
   announcements: ['공지사항', '앱에 표시할 공지를 관리하세요.'],
@@ -143,6 +144,9 @@ function render() {
   $('dirty').textContent = dirty ? '저장하지 않은 변경사항' : '저장된 초안';
   contentLists.render();
   $('payment-notice').value = snapshot.draft.paymentNotice;
+  $('fortune-theme').value = snapshot.draft.fortuneTheme ?? 'cookie';
+  $('fortune-published').textContent = snapshot.publishedFortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키';
+  renderFortuneSelection();
   selectTab(activeTab,{skipLoad:true});
 }
 function selectTab(tab, options = {}) {
@@ -168,7 +172,7 @@ function selectTab(tab, options = {}) {
   if (tab === 'exit-feedback' && !options.skipLoad) void exitFeedback.load();
   if (tab === 'knowledge' && !options.skipLoad) void chatKnowledge.load();
   if (tab === 'credits' && !options.skipLoad) void creditPolicy.load();
-  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback']) $(name).hidden = name !== tab;
+  for (const name of ['credits', 'dashboard', 'products', 'faqs', 'fortune', 'notice', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback']) $(name).hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
 }
 async function request(body) {
@@ -219,6 +223,12 @@ legal = createLegalDocuments(() => client,rememberDetail);
 $('form').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
 $('publish').onclick = () => save(true);
 $('reload').onclick = () => { if (!dirty || confirm('저장하지 않은 변경사항을 버리고 다시 불러올까요?')) load(); };
+function renderFortuneSelection() {
+  const selected = $('fortune-theme').value;
+  $('fortune-selected').textContent = `선택한 초안: ${selected === 'pepero' ? '빼빼로' : '포춘쿠키'}`;
+  document.querySelectorAll('[data-fortune]').forEach(e => e.classList.toggle('selected', e.dataset.fortune === selected));
+}
+$('fortune-theme').onchange = e => { snapshot.draft.fortuneTheme = e.target.value; markDirty(); renderFortuneSelection(); };
 $('payment-notice').oninput = (e) => { snapshot.draft.paymentNotice = e.target.value; markDirty(); };
 $('add-faq').onclick = () => contentLists.addFaq();
 document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => router.go({tab:b.dataset.tab,id:null,version:null}));
@@ -226,6 +236,7 @@ $('preview').onclick = () => {
   const body = $('preview-body'); body.replaceChildren();
   for (const p of snapshot.draft.products.filter((p) => p.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', p.title), node('p', p.description), node('p', `참고 가격 ${p.referencePriceKrw.toLocaleString('ko-KR')}원`)); body.append(section); }
   for (const f of snapshot.draft.faqs.filter((f) => f.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', f.question), node('p', f.answer)); if (f.action === 'passes') section.append(node('p', '내 이용권 이동하기')); body.append(section); }
+  body.append(node('h3', '대화권 소진 화면'), node('p', snapshot.draft.fortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키'));
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();

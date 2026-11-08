@@ -77,6 +77,10 @@
     {
       "source": "/admin/exit-feedback/:path*",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/fortune/:path*",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [
