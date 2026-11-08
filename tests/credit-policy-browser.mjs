@@ -18,15 +18,15 @@ try {
   await page.addStyleTag({ content: fs.readFileSync('admin/admin.css', 'utf8') });
   await page.evaluate(seed => {
     window.fetch = async () => new Response(JSON.stringify({ url: 'https://fixture.invalid', key: 'fixture' }));
-    window.session = {}; window.calls = []; window.policy = { revision: 1, dailyFreeLimit: 10, history: [] };
+    window.session = {}; window.calls = []; window.policy = { revision: 1, dailyFreeLimit: 10, dailyAdLimit: 3, history: [] };
     window.fakeClient = { auth: { getSession: async () => ({ data: { session: window.session } }), onAuthStateChange: f => window.signoutListener = f, signOut: async () => { window.session = null; window.signoutListener('SIGNED_OUT'); } }, functions: { invoke: async (name, options) => {
       if (name === 'admin-content') return { data: { draft: seed, revision: 1, published_revision: 1, contracts: [] } };
       if (name !== 'admin-credit-policy') return { error: new Error('unused fixture') };
       if (options?.body) {
         window.calls.push(options.body);
         if (window.conflict) { window.conflict = false; return { error: { context: { status: 409 } } }; }
-        window.policy.history.unshift({ revision: window.policy.revision + 1, previous_limit: window.policy.dailyFreeLimit, daily_free_limit: options.body.dailyFreeLimit, recorded_at: '2026-10-15T05:00:00Z' });
-        window.policy.revision++; window.policy.dailyFreeLimit = options.body.dailyFreeLimit;
+        window.policy.history.unshift({ revision: window.policy.revision + 1, previous_limit: window.policy.dailyFreeLimit, daily_free_limit: options.body.dailyFreeLimit, previous_ad_limit: window.policy.dailyAdLimit, daily_ad_limit: options.body.dailyAdLimit, recorded_at: '2026-11-08T05:00:00Z' });
+        window.policy.revision++; window.policy.dailyFreeLimit = options.body.dailyFreeLimit; window.policy.dailyAdLimit = options.body.dailyAdLimit;
       }
       return { data: structuredClone(window.policy) };
     } } };
@@ -36,24 +36,36 @@ try {
   await page.locator('#credit-policy-current').getByText('현재 충전 기준 10회', { exact: false }).waitFor();
   assert.equal(await page.locator('#form').isVisible(), false);
   page.on('dialog', d => d.accept());
+  assert.equal(await page.locator('#credit-policy-ad-limit').inputValue(),'3');
+  await page.locator('#credit-policy-ad-limit').fill('7');
   await page.locator('#credit-policy-limit').fill('5'); await page.locator('#credit-policy-save').click();
-  await page.locator('#credit-policy-status').getByText('무료 충전 기준을 저장했습니다.').waitFor();
-  assert.deepEqual(await page.evaluate(() => window.calls), [{ revision: 1, dailyFreeLimit: 5 }]);
+  await page.locator('#credit-policy-status').getByText('대화권·광고 설정을 저장했습니다.').waitFor();
+  assert.deepEqual(await page.evaluate(() => window.calls), [{ revision: 1, dailyFreeLimit: 5, dailyAdLimit: 7 }]);
   assert((await page.locator('#credit-policy-history').innerText()).includes('10회 → 5회'));
+  assert((await page.locator('#credit-policy-history').innerText()).includes('광고 3회 → 7회/일'));
   const out = process.env.QA_SCREENSHOT_DIR;
   if (out) { fs.mkdirSync(out, { recursive: true }); await page.screenshot({ path: out + '/admin-free-policy.png', fullPage: true }); }
+  await page.locator('#credit-policy-ad-limit').fill('9');
   await page.locator('#credit-policy-limit').fill('4'); await page.evaluate(() => window.conflict = true); await page.locator('#credit-policy-save').click();
   await page.locator('#credit-policy-status').getByText('다른 관리자가 먼저 변경했습니다.', { exact: false }).waitFor();
   assert.equal(await page.locator('#credit-policy-limit').inputValue(), '4');
+  assert.equal(await page.locator('#credit-policy-ad-limit').inputValue(),'9');
   await page.locator('#credit-policy-refresh').click();
   await page.locator('#credit-policy-current').getByText('현재 충전 기준 5회', { exact: false }).waitFor();
   assert.equal(await page.locator('#credit-policy-limit').inputValue(), '5');
+  assert.equal(await page.locator('#credit-policy-ad-limit').inputValue(),'7');
   await page.locator('#credit-policy-limit').fill('101'); await page.locator('#credit-policy-save').click();
   assert.equal((await page.evaluate(() => window.calls)).length, 2);
+  await page.locator('#credit-policy-limit').fill('5');
+  for(const invalid of ['-1','101','1.5']){await page.locator('#credit-policy-ad-limit').fill(invalid);await page.locator('#credit-policy-save').click();assert.equal((await page.evaluate(()=>window.calls)).length,2);}
+  await page.locator('#credit-policy-ad-limit').fill('0');
   await page.locator('#credit-policy-limit').fill('0'); await page.locator('#credit-policy-save').click();
   await page.locator('#credit-policy-current').getByText('현재 충전 기준 0회', { exact: false }).waitFor();
   for (const width of [430, 390, 360]) {
     await page.setViewportSize({ width, height: 844 });
+    await page.waitForFunction(()=>document.querySelector('#sidebar').getBoundingClientRect().right<=1);
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    assert(await page.evaluate(()=>['#credit-policy-limit','#credit-policy-ad-limit','#credit-policy-save','#credit-policy-refresh'].every(s=>{const r=document.querySelector(s).getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})));
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     if (out && width === 390) await page.screenshot({ path: out + '/admin-free-policy-mobile.png', fullPage: true });
   }
@@ -61,6 +73,7 @@ try {
   await page.locator('#logout').click();
   assert(await page.locator('#editor').isHidden());
   assert.equal(await page.locator('#credit-policy-history').innerText(), '');
+  assert.equal(await page.locator('#credit-policy-ad-limit').inputValue(),'');
   assert.deepEqual(errors, []);
-  console.log('PASS credit policy: deep link, 10→5→0, conflict retains input, reload, range, history, 360/390/430, logout');
+  console.log('PASS credit policy: free 10→5→0, ads 3→7→0, conflict preserves both inputs, reload, integer ranges, both history fields, 360/390/430, logout');
 } finally { await browser.close(); }
