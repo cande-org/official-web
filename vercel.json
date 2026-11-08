@@ -15,6 +15,10 @@
       "destination": "/admin/index.html"
     },
     {
+      "source": "/admin/credits/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
       "source": "/admin/products/:path*",
       "destination": "/admin/index.html"
     },
