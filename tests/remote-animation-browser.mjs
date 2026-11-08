@@ -35,7 +35,7 @@ try{
    return response.ok?{data:await response.json()}:{error:{context:new Response('{}',{status:response.status})}};
   }}};
  },{origin});
- async function shot(name){if(out){await page.screenshot({path:path.join(out,name+'.png'),animations:'disabled',fullPage:true});}}
+ async function shot(name){if(out){await page.screenshot({path:path.join(out,name+'.png'),animations:'disabled',fullPage:true});if(/^0[1-4]-/.test(name))await page.waitForTimeout(1200);}}
  await page.goto(origin+'/admin/fortune');await page.locator('#fortune').waitFor({state:'visible'});
  assert.equal(await page.locator('#page-title').innerText(),'대화권 애니메이션');
  await shot('01-before-upload');
