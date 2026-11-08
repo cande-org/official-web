@@ -1,4 +1,5 @@
 import { createExitFeedback } from './exit-feedback.js';
+import { createAnimationPackages } from './animation-packages.js';
 import { createChatKnowledge } from './chat-knowledge.js';
 import {localPages,renderPager,setPagerBusy,clearPager} from './pagination.js';
 import { createAdminRouter, readAdminRoute, adminRouteUrl, resumeAdminRoute, RETURN_ROUTE_KEY } from './routing.js';
@@ -24,6 +25,7 @@ let members;
 let chatHistory;
 let operations;
 let exitFeedback;
+let animationPackages;
 const isOperationTab=tab=>['payments','ads','friends'].includes(tab);
 let legal;
 let support;
@@ -43,7 +45,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); exitFeedback?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { animationPackages?.clear();routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); exitFeedback?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -121,6 +123,7 @@ async function applyRoute(route){
     else if(route.tab==='admins')await loadAdmins();
     else if(route.tab==='prompts')await promptStudio.load();
     else if(route.tab==='credits')await creditPolicy.load();
+    else if(route.tab==='fortune')await animationPackages.load();
     if(ticket!==routeTicket||!snapshot||adminRouteUrl(router.current)!==adminRouteUrl(route))return;
     if(!route.id)return;
     let result;
@@ -145,7 +148,8 @@ function render() {
   contentLists.render();
   $('payment-notice').value = snapshot.draft.paymentNotice;
   $('fortune-theme').value = snapshot.draft.fortuneTheme ?? 'cookie';
-  $('fortune-published').textContent = snapshot.publishedFortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키';
+  $('fortune-published').textContent = snapshot.publishedFortuneAnimation?.name ?? (snapshot.publishedFortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키');
+  animationPackages.render(snapshot.publishedFortuneAnimation);
   renderFortuneSelection();
   selectTab(activeTab,{skipLoad:true});
 }
@@ -161,6 +165,7 @@ function selectTab(tab, options = {}) {
   if (changed) { status(''); window.scrollTo({ top: 0, behavior: 'instant' }); }
   $('form').hidden = ['credits', 'dashboard', 'admins', 'prompts', 'announcements', 'push', 'members', 'legal', 'support', 'chats', 'payments', 'ads', 'friends', 'knowledge', 'exit-feedback'].includes(tab);
   if (tab === 'dashboard') { resizeCharts(); if(!options.skipLoad)void loadMetrics(); }
+  if (tab === 'fortune' && !options.skipLoad) void animationPackages.load();
   if (tab === 'legal' && !options.skipLoad) void legal.load();
   if (tab === 'support' && !options.skipLoad) void support.load();
   if (isOperationTab(tab) && !options.skipLoad) void operations.load(tab);
@@ -195,6 +200,7 @@ async function load() {
 }
 async function save(publish) {
   if (busy) return;
+  if (animationPackages.isBusy()) { status('애니메이션 업로드가 끝난 뒤 저장해 주세요.',true); return; }
   // Validate hidden panels too and reveal the first invalid field.
   const invalid = $('form').querySelector(':invalid');
   if (invalid) { router.go({tab:invalid.closest('section').id,id:null,version:null}); invalid.reportValidity(); return; }
@@ -220,12 +226,15 @@ chatKnowledge = createChatKnowledge(()=>client,id=>rememberDetail('knowledge',id
 creditPolicy = createCreditPolicy(() => client);
 promptStudio = createPromptStudio(() => client);
 legal = createLegalDocuments(() => client,rememberDetail);
+animationPackages = createAnimationPackages({getClient:()=>client,getDraft:()=>snapshot?.draft,
+  stage:descriptor=>{snapshot.draft.fortuneAnimation=descriptor;markDirty();},
+  onError:message=>status(message,true)});
 $('form').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
 $('publish').onclick = () => save(true);
 $('reload').onclick = () => { if (!dirty || confirm('저장하지 않은 변경사항을 버리고 다시 불러올까요?')) load(); };
 function renderFortuneSelection() {
   const selected = $('fortune-theme').value;
-  $('fortune-selected').textContent = `선택한 초안: ${selected === 'pepero' ? '빼빼로' : '포춘쿠키'}`;
+  $('fortune-selected').textContent = `기본 버전: ${selected === 'pepero' ? '빼빼로' : '포춘쿠키'}`;
   document.querySelectorAll('[data-fortune]').forEach(e => e.classList.toggle('selected', e.dataset.fortune === selected));
 }
 $('fortune-theme').onchange = e => { snapshot.draft.fortuneTheme = e.target.value; markDirty(); renderFortuneSelection(); };
@@ -236,7 +245,7 @@ $('preview').onclick = () => {
   const body = $('preview-body'); body.replaceChildren();
   for (const p of snapshot.draft.products.filter((p) => p.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', p.title), node('p', p.description), node('p', `참고 가격 ${p.referencePriceKrw.toLocaleString('ko-KR')}원`)); body.append(section); }
   for (const f of snapshot.draft.faqs.filter((f) => f.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', f.question), node('p', f.answer)); if (f.action === 'passes') section.append(node('p', '내 이용권 이동하기')); body.append(section); }
-  body.append(node('h3', '대화권 소진 화면'), node('p', snapshot.draft.fortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키'));
+  body.append(node('h3', '대화권 애니메이션'), node('p', snapshot.draft.fortuneAnimation?.name ?? (snapshot.draft.fortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키')));
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();

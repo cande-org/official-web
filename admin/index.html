@@ -57,10 +57,15 @@
 <form id="form" novalidate><section id="products"><details class="detail-panel editor-help"><summary>상품 편집 안내</summary><p>순서와 노출, 이름·소개를 변경합니다. 스토어 상품 ID와 지급 횟수는 결제 계약입니다. 새 상품 등록·수량 변경은 스토어 및 지급 처리의 연결이 필요합니다.</p><p>참고 가격은 결제가 비활성화된 화면에서만 사용됩니다. 실제 결제 화면은 App Store·Google Play 가격을 사용합니다.</p></details><div id="product-tools" class="collection-tools"></div><div id="product-list"></div></section>
 <section id="faqs" hidden><div class="section-heading"><span class="helper">앱에 표시할 질문과 답변을 관리하세요.</span><button type="button" id="add-faq">질문 추가</button></div><div id="faq-tools" class="collection-tools"></div><div id="faq-list"></div></section>
 <section id="fortune" class="panel" hidden>
-<h2>대화권 소진 화면</h2><p>현재 공개: <strong id="fortune-published">포춘쿠키</strong></p>
-<label for="fortune-theme">노출할 버전</label><select id="fortune-theme" required><option value="cookie">포춘쿠키</option><option value="pepero">빼빼로</option></select>
+<h2>대화권 애니메이션</h2><p>현재 공개: <strong id="fortune-published">포춘쿠키</strong></p>
+<label for="animation-source">사용할 애니메이션</label><select id="animation-source"><option value="bundled">앱 기본 애니메이션</option><option value="remote">업로드한 애니메이션</option></select>
+<div id="animation-uploaded-fields" hidden><label for="animation-package">업로드 목록</label><select id="animation-package"><option value="">업로드한 애니메이션 선택</option></select></div>
+<div class="animation-upload-field"><label for="animation-upload">새 애니메이션 업로드</label><input id="animation-upload" type="file" accept=".json,application/json" aria-describedby="animation-upload-help"><p id="animation-upload-help" class="helper">그림·효과음과 두 번 터치 연출을 담은 애니메이션 패키지(.json), 최대 8MB. 업로드 후 미리보기로 확인하고 ‘앱에 공개’를 눌러 주세요.</p><p class="animation-samples"><a href="/assets/animations/cookie.animation.json" download>포춘쿠키 샘플 받기</a><a href="/assets/animations/pepero.animation.json" download>빼빼로 샘플 받기</a></p><p id="animation-upload-status" role="status"></p></div>
+<div id="animation-preview" hidden><p id="animation-details" class="helper"></p><button id="animation-play" type="button" aria-label="애니메이션 터치 미리보기"><canvas id="animation-canvas" width="336" height="255" aria-hidden="true"></canvas></button><p id="animation-caption"></p><p id="animation-preview-status" role="status"></p><button id="animation-replay" type="button">미리보기 다시 시작</button></div>
+<hr><h3>앱 기본 애니메이션</h3><p class="helper">기본 연출을 선택하거나 이 기능을 지원하지 않는 이전 앱에서 표시합니다.</p>
+<label for="fortune-theme">기본 버전</label><select id="fortune-theme" required><option value="cookie">포춘쿠키</option><option value="pepero">빼빼로</option></select>
 <div class="fortune-options"><figure data-fortune="cookie"><img src="/assets/fortune-cookie-preview.png" width="336" height="255" alt="포춘쿠키 원본 그래픽"><figcaption>포춘쿠키</figcaption></figure><figure data-fortune="pepero"><img src="/assets/fortune-pepero-preview.png" width="336" height="255" alt="빼빼로 원본 그래픽"><figcaption>빼빼로</figcaption></figure></div>
-<p id="fortune-selected" role="status"></p><p class="helper">임시 저장 후 ‘앱에 공개’를 누르면 적용됩니다. 이 기능을 지원하는 앱에서 다음 소진 화면을 열 때 반영되며, 이미 열린 연출과 저장된 운세 문구는 유지됩니다. 이전 앱은 포춘쿠키를 표시합니다.</p>
+<p id="fortune-selected" role="status"></p><p class="helper">임시 저장은 앱 노출을 바꾸지 않습니다. 공개 후 지원 앱이 실행 또는 다음 소진 화면 진입 시 새 버전을 받아 저장합니다. 다운로드에 실패하면 마지막 정상 애니메이션을 유지하며, 이미 열린 연출과 저장된 운세는 바뀌지 않습니다. 원격 에셋을 지원하는 최초 앱 업데이트는 필요합니다.</p>
 </section>
 <section id="notice" class="panel" hidden><label>상점 하단 안내 문구<textarea id="payment-notice" rows="16" maxlength="6000" required></textarea></label></section>
 <footer class="actions"><span id="dirty">저장된 초안</span><button type="submit">임시 저장</button><button type="button" id="preview">미리보기</button><button type="button" id="publish" class="primary">앱에 공개</button></footer></form></section>
