@@ -37,7 +37,7 @@ export function renderTrend(rows, audience = 'all', grain = 'day') {
     grid: { left: 42, right: 16, top: 52, bottom: extended ? 72 : 32 },
     xAxis: { ...axis, type: 'category', data: rows.map(b => b.date), axisLabel: { ...axis.axisLabel, hideOverlap: true, formatter: value => metricBucketLabel(value,grain,true,singleDay) } },
     yAxis: { ...axis, type: 'value', min: 0, minInterval: 1, splitLine: { lineStyle: { color: '#edf0f5', type: 'dashed' } } },
-    dataZoom: extended ? [{ type: 'slider', bottom: 6, height: 20, borderColor: '#e8ebf1', fillerColor:'#e4e9f6', handleStyle:{color:ink}, textStyle:{fontSize:10}, start: Math.max(0,100-35/rows.length*100), end:100 }] : [],
+    dataZoom: extended ? [{ type: 'slider', bottom: 6, height: 20, borderColor: '#e8ebf1', fillerColor:'#e4e9f6', handleStyle:{color:ink}, textStyle:{fontSize:10}, start: grain==='hour'?0:Math.max(0,100-35/rows.length*100), end:100 }] : [],
     series: [
       { name:'활성 사용자', type:'line', data:rows.map(b => b.activeUsers), symbol:'circle', symbolSize:5, showSymbol:rows.length <=14, lineStyle:{width:2.5}, itemStyle:{color:ink}, emphasis:{focus:'series'}, connectNulls:false },
       { name:acquisition, type:'bar', data:rows.map(b => audience==='guest'?b.guests:b.members), barMaxWidth:24, itemStyle:{color:light,borderRadius:[3,3,0,0]}, emphasis:{focus:'series'} }

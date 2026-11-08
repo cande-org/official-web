@@ -44,6 +44,10 @@ try {
   assert.equal(await page.locator('#metric-start').inputValue(),start);assert.equal(await page.locator('#metric-end').inputValue(),end);
   assert.equal((await page.evaluate(()=>window.calls.at(-1))).grain,'hour');
   assert((await page.locator('#growth-retention').innerText()).includes('시간별 조회에서도'));
+  if(period!=='day') {
+   assert((await page.locator('#metric-chart').innerText()).includes(start.slice(5).replace('-','.')));
+   if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QA_SCREENSHOT_DIR+`/${period}-hourly.png`});
+  }
  }
  await page.locator('#metric-prev').click();await page.locator('#metric-status').getByText(/^전체 이용자/).waitFor();assert.equal(await page.locator('#metric-start').inputValue(),'2026-10-31');
  await page.locator('#metric-next').click();await page.locator('#metric-status').getByText(/^전체 이용자/).waitFor();assert.equal(await page.locator('#metric-start').inputValue(),'2026-11-01');
