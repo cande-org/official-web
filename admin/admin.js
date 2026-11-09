@@ -148,6 +148,8 @@ function render() {
   $('dirty').textContent = dirty ? '저장하지 않은 변경사항' : '저장된 초안';
   contentLists.render();
   $('payment-notice').value = snapshot.draft.paymentNotice;
+  $('store-section-order').value = snapshot.draft.storeSectionOrder ?? 'credits_first';
+  $('store-order-published').textContent = `현재 공개: ${snapshot.publishedStoreSectionOrder === 'subscriptions_first' ? '구독권 먼저' : '대화권 먼저'}`;
   $('fortune-theme').value = snapshot.draft.fortuneTheme ?? 'cookie';
   $('fortune-published').textContent = snapshot.publishedFortuneAnimation?.name ?? (snapshot.publishedFortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키');
   animationPackages.render(snapshot.publishedFortuneAnimation);
@@ -240,6 +242,7 @@ function renderFortuneSelection() {
 }
 $('fortune-theme').onchange = e => { snapshot.draft.fortuneTheme = e.target.value; markDirty(); renderFortuneSelection(); animationPackages.render(snapshot.publishedFortuneAnimation); };
 $('payment-notice').oninput = (e) => { snapshot.draft.paymentNotice = e.target.value; markDirty(); };
+$('store-section-order').onchange = e => { snapshot.draft.storeSectionOrder = e.target.value; markDirty(); };
 $('add-faq').onclick = () => contentLists.addFaq();
 document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => router.go({tab:b.dataset.tab,id:null,version:null}));
 $('preview').onclick = () => {
