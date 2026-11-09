@@ -247,7 +247,15 @@ $('add-faq').onclick = () => contentLists.addFaq();
 document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => router.go({tab:b.dataset.tab,id:null,version:null}));
 $('preview').onclick = () => {
   const body = $('preview-body'); body.replaceChildren();
-  for (const p of snapshot.draft.products.filter((p) => p.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', p.title), node('p', p.description), node('p', `참고 가격 ${p.referencePriceKrw.toLocaleString('ko-KR')}원`)); body.append(section); }
+  const products = snapshot.draft.products.filter(p => p.enabled);
+  const appendProduct = p => { const section = node('section', null, 'preview-section'); section.append(node('h3', p.title), node('p', p.description), node('p', `참고 가격 ${p.referencePriceKrw.toLocaleString('ko-KR')}원`)); body.append(section); };
+  if (snapshot.contracts) {
+    const subscriptionKeys = new Set(snapshot.contracts.filter(c => c.subscription).map(c => c.key));
+    for (const subscriptions of snapshot.draft.storeSectionOrder === 'subscriptions_first' ? [true, false] : [false, true]) {
+      body.append(node('h2', subscriptions ? '월간 멤버십' : '필요할 때 충전'));
+      products.filter(p => subscriptionKeys.has(p.key) === subscriptions).forEach(appendProduct);
+    }
+  } else products.forEach(appendProduct);
   for (const f of snapshot.draft.faqs.filter((f) => f.enabled)) { const section = node('section', null, 'preview-section'); section.append(node('h3', f.question), node('p', f.answer)); if (f.action === 'passes') section.append(node('p', '내 이용권 이동하기')); body.append(section); }
   body.append(node('h3', '대화권 애니메이션'), node('p', snapshot.draft.fortuneAnimation?.name ?? (snapshot.draft.fortuneTheme === 'pepero' ? '빼빼로' : '포춘쿠키')));
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });

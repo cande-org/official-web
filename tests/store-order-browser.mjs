@@ -28,7 +28,7 @@ try {
   return r.fulfill({contentType:'text/html',headers:{'Content-Security-Policy':csp},body:fs.readFileSync('admin/index.html','utf8')});
  });
  await page.addInitScript(({seed})=>{
-  const initial={draft:seed,revision:1,published_revision:1,published_at:'2026-11-08T00:00:00Z',publishedFortuneTheme:'cookie'};
+  const initial={draft:seed,contracts:seed.products.map(p=>({key:p.key,subscription:p.key.endsWith('Monthly')})),revision:1,published_revision:1,published_at:'2026-11-08T00:00:00Z',publishedFortuneTheme:'cookie'};
   window.fixture=JSON.parse(sessionStorage.getItem('fixture:content')||JSON.stringify(initial));
   window.calls=[];window.session={};
   window.fakeClient={auth:{getSession:async()=>({data:{session:window.session}}),onAuthStateChange:f=>window.signedOut=f,signOut:async()=>{window.session=null;window.signedOut('SIGNED_OUT');}},functions:{invoke:async(name,o)=>{
@@ -51,8 +51,10 @@ try {
  assert.match(await page.locator('#store-order-published').innerText(),/대화권 먼저/);
  const shot=async name=>{if(out)await page.screenshot({animations:'disabled',fullPage:true,path:out+'/'+name+'.png'});};
  await shot('admin-credits-first');
+ await page.locator('#preview').click();assert.equal(await page.locator('#preview-body h2').first().innerText(),'필요할 때 충전');await page.locator('#close-preview').click();
  await page.locator('#store-section-order').selectOption('subscriptions_first');
  assert.match(await page.locator('#dirty').innerText(),/저장하지/);
+ await page.locator('#preview').click();assert.equal(await page.locator('#preview-body h2').first().innerText(),'월간 멤버십');await page.locator('#close-preview').click();
  assert.match(await page.locator('#store-order-published').innerText(),/대화권 먼저/);
  await page.locator('#form button[type=submit]').click();
  await page.waitForFunction(()=>window.fixture.revision===2);
@@ -78,7 +80,7 @@ try {
   await shot('admin-'+width);
  }
  assert.deepEqual(errors,[]);
- if(out)fs.writeFileSync(out+'/verification.json',JSON.stringify({ok:true,synthetic:true,productionWrites:0,checks:['credits-first default','selection stages draft','save and reload preserves draft','publish independently changes visible public order','reverse publication','409 conflict preserves published order','products, prices, FAQ and notice unchanged','360/390/430 no horizontal overflow'],errors},null,2));
+ if(out)fs.writeFileSync(out+'/verification.json',JSON.stringify({ok:true,synthetic:true,productionWrites:0,checks:['credits-first default','selection stages draft','preview follows draft group order without publication','save and reload preserves draft','publish independently changes visible public order','reverse publication','409 conflict preserves published order','products, prices, FAQ and notice unchanged','360/390/430 no horizontal overflow'],errors},null,2));
  console.log('PASS store order: default, draft/save/reload, publish both orders, conflict, other content unchanged, mobile widths');
  await context.close();
 } finally {await browser.close();}
