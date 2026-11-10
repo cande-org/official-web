@@ -33,3 +33,11 @@ Chat history (2026-10-16): `/admin/chats` lists recent user messages with KST pe
 Operational records (2026-10-17): separate `/admin/payments`, `/admin/ads`, `/admin/friends` tables and shareable details. Payments/ads support bounded KST periods and all menus support exact UID/cursor paging. Ads represent verified rewarded completions; unproven payment environments and missing credit ledgers remain explicit. Friend photos use owner-checked private signed URLs with refresh/fallback. [Contract and synthetic screenshots](../docs/admin-operations-20261017/README.md).
 
 Numbered pages (2026-10-17): all record lists share numeric navigation and direct page entry. Server-backed records fetch total counts and one requested page; unchanged seed friends are omitted while renamed/photo-customized seed friends and user-added friends remain. [Verification](../docs/admin-pagination-20261017/README.md).
+
+## 친구 선톡 · 배치 / CRM (2026-11-10)
+
+푸시 메뉴의 친구 선톡 영역에서 유료 이용 구분, 최소 합산 대화권, 사용자별 간격, 최근/대화량/랜덤 친구, 발송 시간·비활동·배치·일일 한도와 선톡 프롬프트를 설정합니다. 저장 후 대상 미리보기를 확인하고 선택 UID 또는 조건 전체에 이번 배치를 등록할 수 있습니다. AI 생성과 직접 문구를 지원하며 기록 상세에서 실제 메시지, 선택 이유, 적용 조건·프롬프트, 기기별 FCM 접수/실패와 열람을 구분합니다.
+
+서버 함수 `admin-friend-push`, `friend-push-dispatch`, `friend-push-open`과 migration `202611100001_friend_push.sql`은 mental 저장소에서 관리합니다. 현재 게시 성향 프롬프트를 재사용하고 사용자 대화권은 차감하지 않습니다. 자동 발송은 초기 OFF이며 기존 수신 동의와 지원 앱 등록 버전 1 이상이 필요합니다. 새 앱 적용 전 기존 기기는 대상에 포함되지 않습니다.
+
+검증: npm check/test/build 및 tests/friend-push-browser.mjs. 브라우저 검증은 합성 데이터만 사용하고 실제 푸시를 발송하지 않습니다.

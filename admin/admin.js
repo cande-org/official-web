@@ -1,3 +1,4 @@
+import { createFriendPush } from './friend-push.js';
 import { createExitFeedback } from './exit-feedback.js';
 import { createAnimationPackages } from './animation-packages.js';
 import { createChatKnowledge } from './chat-knowledge.js';
@@ -22,6 +23,7 @@ let creditPolicy;
 let chatKnowledge;
 let promptStudio;
 let announcements;
+let friendPush;
 let members;
 let chatHistory;
 let operations;
@@ -46,7 +48,7 @@ function setMenu(open, restoreFocus = true) {
   else if (restoreFocus && mobileMenu.matches) $('menu-toggle').focus();
 }
 function shell(visible) {
-  if (!visible) { animationPackages?.clear();routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); exitFeedback?.clear(); legal?.clear(); support?.clear(); }
+  if (!visible) { animationPackages?.clear();routeTicket++;for(const dialog of document.querySelectorAll('dialog[open]'))quietClose.add(dialog);creditPolicy?.clear();chatKnowledge?.clear();contentLists?.reset(); promptStudio?.clear(); announcements?.clear(); friendPush?.clear(); members?.clear(); chatHistory?.clear(); operations?.clear(); exitFeedback?.clear(); legal?.clear(); support?.clear(); }
   document.body.classList.toggle('signed-in', visible);
   $('sidebar').hidden = !visible; $('topbar').hidden = !visible;
   setMenu(false, false);
@@ -90,7 +92,7 @@ const detailDialogs = { knowledge:'knowledge-dialog',products:'item-dialog',faqs
 const quietClose = new WeakSet();
 const router = createAdminRouter({onNavigate:applyRoute,canNavigate:()=>{
   if(busy||chatKnowledge?.isBusy()||creditPolicy?.isBusy()||contentLists?.isBusy()||announcements?.isBusy()||legal?.isBusy()){status('요청을 처리하는 중입니다. 완료 후 이동해 주세요.',true);return false;}
-  return !(chatKnowledge?.hasUnsaved()||creditPolicy?.hasUnsaved()||contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
+  return !(chatKnowledge?.hasUnsaved()||creditPolicy?.hasUnsaved()||contentLists?.hasUnsavedChanges()||announcements?.hasUnsavedChanges()||friendPush?.hasUnsavedChanges()||legal?.hasUnsaved())||confirm('저장하지 않은 상세 편집 내용을 버리고 이동할까요?');
 }});
 function rememberDetail(tab,id,version=null,accountState){router.go({tab,id,version,...(accountState?{accountState}:{})},{notify:false,check:false});}
 function closeRouteDialogs(){
@@ -177,6 +179,7 @@ function selectTab(tab, options = {}) {
   if (tab === 'admins' && !options.skipLoad) void loadAdmins();
   if (tab === 'prompts' && !options.skipLoad) void promptStudio.load();
   if ((tab === 'announcements' || tab === 'push') && !options.skipLoad) void announcements.load();
+  if (tab === 'push' && !options.skipLoad) void friendPush?.load();
   if (tab === 'exit-feedback' && !options.skipLoad) void exitFeedback.load();
   if (tab === 'knowledge' && !options.skipLoad) void chatKnowledge.load();
   if (tab === 'credits' && !options.skipLoad) void creditPolicy.load();
@@ -261,7 +264,7 @@ $('preview').onclick = () => {
   body.append(node('h3', '결제 안내'), node('p', snapshot.draft.paymentNotice)); $('preview-dialog').showModal(); $('preview-dialog').scrollTop = 0; $('preview-title').focus({ preventScroll: true });
 };
 $('close-preview').onclick = () => $('preview-dialog').close();
-window.addEventListener('beforeunload', (e) => { if (dirty || chatKnowledge?.hasUnsaved() || creditPolicy?.hasUnsaved() || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (dirty || chatKnowledge?.hasUnsaved() || creditPolicy?.hasUnsaved() || contentLists?.hasUnsavedChanges() || promptStudio?.hasUnsaved() || legal?.hasUnsaved() || announcements?.hasUnsavedChanges()||friendPush?.hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; } });
 $('logout').onclick = async () => { if ((dirty || creditPolicy?.hasUnsaved()) && !confirm('저장하지 않은 변경사항을 버리고 로그아웃할까요?')) return; authGeneration++; dirty = false; await client.auth.signOut({ scope: 'local' }); snapshot = null; $('editor').hidden = true; shell(false); clearMetrics(); clearAdmins(); $('login').hidden = false; $('logout').hidden = true; status('로그아웃했습니다.'); };
 $('signin').onclick = async () => {
   if (!client) return;
@@ -462,6 +465,7 @@ try {
   operations = createOperations(() => client,route=>router.go(route,{notify:false,check:false}));
   chatHistory = createChatHistory(() => client,route=>router.go({tab:'chats',...route},{notify:false,check:false}));
   support = createSupport(() => client,{onDetail:rememberDetail});
+  friendPush = createFriendPush(() => client, $('friend-push-root'));
   members = createMembers(() => client, ids => { router.go({tab:'push',id:null,version:null},{notify:false,check:false});selectTab('push',{skipLoad:true});void announcements.openForMembers(ids); },rememberDetail);
   const { data: { session }, error } = await client.auth.getSession();
   const route=resumeAdminRoute({href:authEntryUrl},sessionStorage);router.initialize(route);activeTab=route.tab;
