@@ -12,7 +12,7 @@ try{
  await page.addStyleTag({content:fs.readFileSync('admin/admin.css','utf8')});await page.addScriptTag({content:bundle.outputFiles[0].text});
  await page.evaluate(async()=>{
   window.calls=[];window.confirm=()=>true;window.failQueue=true;
-  window.config={id:1,revision:1,enabled:false,audience:'active_paid',min_credits:1,interval_hours:24,inactive_hours:1,strategy:'recent',start_hour:9,end_hour:21,batch_limit:20,daily_limit:1,prompt:'가상의 선톡 지침'};
+  window.config={id:1,revision:1,enabled:false,audience:'active_paid',min_credits:1,interval_hours:24,inactive_hours:1,wait_for_reply:false,strategy:'recent',start_hour:9,end_hour:21,batch_limit:20,daily_limit:1,prompt:'가상의 선톡 지침'};
   const user='a7a2bc52-c0db-44d3-8a7a-4a57a3e6aaac';
   const job={id:'b7a2bc52-c0db-44d3-8a7a-4a57a3e6aaac',user_id:user,friend_id:'fixture-friend',room_id:'fixture-room',message_id:'fixture-message',friend_snapshot:{nickname:'가상친구'},status:'saved',message_text:'가상의 안부 메시지',selection:{strategy:'recent',userMessages:12,availableCredits:20},created_at:'2026-11-10T01:00:00Z',deliveries:[{status:'sent',opened_at:'2026-11-10T01:03:00Z'}],prompt_revision:'studio-1+friend-push-v1'};
   window.fakeClient={auth:{getSession:async()=>({data:{session:{}}})},functions:{invoke:async(_name,{body})=>{
@@ -27,9 +27,15 @@ try{
   window.view=window.mount();await window.view.load();document.querySelector('.friend-push-panel').open=true;
  });
  assert(!(await page.locator('#friend-push-enabled').isChecked()));
- await page.locator('#friend-push-min_credits').fill('12');
+ await page.locator('#friend-push-audience').selectOption('active_paid_or_credits');
+ await page.locator('#friend-push-min_credits').fill('30');
+ await page.locator('#friend-push-inactive_hours').fill('24');
+ await page.locator('#friend-push-wait_for_reply').check();
  await page.getByRole('button',{name:'대상 미리보기',exact:true}).click();await page.getByText('변경한 선톡 설정을 먼저 저장해 주세요.',{exact:true}).waitFor();
  await page.getByRole('button',{name:'설정 저장',exact:true}).click();await page.getByText('선톡 설정을 저장했습니다.',{exact:true}).waitFor();
+ const saved=await page.evaluate(()=>window.config);
+ assert.equal(saved.audience,'active_paid_or_credits');assert.equal(saved.min_credits,30);
+ assert.equal(saved.inactive_hours,24);assert.equal(saved.wait_for_reply,true);
  await page.getByRole('button',{name:'대상 미리보기',exact:true}).click();await page.getByText(/대상 1명 · 지원 앱 기기 1대/).waitFor();
  await page.getByRole('button',{name:'이번 배치 보내기',exact:true}).click();await page.getByText(/친구 선톡 요청을 완료하지 못했습니다/).waitFor();
  await page.getByRole('button',{name:'이번 배치 보내기',exact:true}).click();await page.getByText(/1명의 선톡 작업을 등록했습니다/).waitFor();

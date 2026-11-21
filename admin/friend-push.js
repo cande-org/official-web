@@ -1,6 +1,6 @@
 import { memberUids } from './push-controls.js';
 const names={pending:'대기',generating:'생성 중',saved:'대화 저장 완료',skipped:'건너뜀',failed:'실패',sending:'전송 중',sent:'FCM 접수'};
-const reasons={settings_changed:'설정 변경·자동 발송 중단',consent_withdrawn:'수신 동의 철회',outside_window:'발송 시간 외',friend_or_room_removed:'친구·대화방 삭제',credits_changed:'대화권 조건 변경',subscription_changed:'구독 상태 변경',payment_changed:'결제 상태 변경',user_active:'사용자가 대화 중',no_supported_device:'지원 앱·기기 없음',generation_skipped:'선톡이 부적절하여 생략',generation_failed:'생성 실패',generation_provider_failed:'AI 제공사 오류',generation_incomplete:'생성 답변 미완료',generation_outcome_unknown:'생성 결과 미확인 · 자동 재생성 안 함',delivery_outcome_unknown:'푸시 결과 미확인 · 자동 재전송 안 함',invalid_token:'유효하지 않은 기기 토큰',provider_rejected:'푸시 제공사 거절',device_changed:'기기·알림 설정 변경'};
+const reasons={settings_changed:'설정 변경·자동 발송 중단',consent_withdrawn:'수신 동의 철회',outside_window:'발송 시간 외',friend_or_room_removed:'친구·대화방 삭제',credits_changed:'대화권 조건 변경',subscription_changed:'구독 상태 변경',payment_changed:'결제 상태 변경',user_active:'최근 대화 있음',awaiting_reply:'이전 선톡에 답장 대기 중',no_supported_device:'지원 앱·기기 없음',generation_skipped:'선톡이 부적절하여 생략',generation_failed:'생성 실패',generation_provider_failed:'AI 제공사 오류',generation_incomplete:'생성 답변 미완료',generation_outcome_unknown:'생성 결과 미확인 · 자동 재생성 안 함',delivery_outcome_unknown:'푸시 결과 미확인 · 자동 재전송 안 함',invalid_token:'유효하지 않은 기기 토큰',provider_rejected:'푸시 제공사 거절',device_changed:'기기·알림 설정 변경'};
 const date=value=>value?new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false}):'—';
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e;};
 export function createFriendPush(client,root){
@@ -19,10 +19,11 @@ export function createFriendPush(client,root){
   fields[key]=input;wrap.append(input);grid.append(wrap);return input;
  }
  field('enabled','자동 선톡','checkbox');
- field('audience','대상 사용자','text',[['active_paid','현재 실결제 구독 중'],['paid_history','실결제 이력 있음'],['all','전체 사용자']]);
+ field('audience','대상 사용자','text',[['active_paid','현재 실결제 구독 중'],['active_paid_or_credits','현재 실결제 구독 중 또는 대화권 기준 충족'],['paid_history','실결제 이력 있음'],['all','전체 사용자']]);
  field('min_credits','현재 대화권 최소 잔액');
  field('interval_hours','사용자별 최소 간격 (시간)');
- field('inactive_hours','마지막 사용자 대화 후 (시간)');
+ field('inactive_hours','마지막 대화 후 (시간)');
+ field('wait_for_reply','이전 선톡에 답장이 올 때까지 대기','checkbox');
  field('strategy','친구 선택 기준','text',[['recent','가장 최근 대화한 친구'],['most_messages','대화를 가장 많이 한 친구'],['random','조건에 맞는 친구 중 랜덤']]);
  field('start_hour','발송 시작 (KST 시)').min='8';fields.start_hour.max='20';
  field('end_hour','발송 종료 (KST 시)').max='21';
@@ -83,7 +84,7 @@ export function createFriendPush(client,root){
  check.onclick=async()=>{if(busy)return;if(dirty){message('변경한 선톡 설정을 먼저 저장해 주세요.',true);return;}busy=true;check.disabled=true;const ticket=generation;
   try{const ids=memberUids(uids.value);const data=await api({action:'preview',revision,...(ids.length?{userIds:ids}:{})});if(ticket!==generation)return;preview={...data,userIds:ids};requestId=crypto.randomUUID();
    count.textContent=`대상 ${data.recipients}명 · 지원 앱 기기 ${data.devices}대 · 이번 배치 최대 ${Math.min(data.recipients,data.batchLimit)}명`;send.disabled=!data.recipients;
-   samples.replaceChildren(table(['대상 회원','선택 친구','대화방','대화 수 / 현재 대화권'],data.samples.map(s=>[s.user_id,s.friend_name,s.room_id,`${s.selection.userMessages} / ${s.selection.availableCredits}`])));message('수신 동의·대화권·간격·지원 앱을 확인한 대상입니다.');
+   samples.replaceChildren(table(['대상 회원','선택 친구','대화방','대화 수 / 현재 대화권'],data.samples.map(s=>[s.user_id,s.friend_name,s.room_id,`${s.selection.userMessages} / ${s.selection.availableCredits}`])));message('수신 동의·대상 조건·발송 간격·지원 앱을 확인한 대상입니다.');
   }catch(error){if(ticket===generation)message(error.message,true);}finally{busy=false;check.disabled=false;}
  };
  send.onclick=async()=>{if(busy||!preview||dirty)return;if(mode.value==='manual'&&!text.value.trim()){message('보낼 메시지를 입력해 주세요.',true);return;}
