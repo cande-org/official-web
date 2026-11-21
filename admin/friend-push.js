@@ -25,8 +25,15 @@ export function createFriendPush(client,root){
  field('inactive_hours','마지막 대화 후 (시간)');
  field('wait_for_reply','이전 선톡에 답장이 올 때까지 대기','checkbox');
  field('strategy','친구 선택 기준','text',[['recent','가장 최근 대화한 친구'],['most_messages','대화를 가장 많이 한 친구'],['random','조건에 맞는 친구 중 랜덤']]);
- field('start_hour','발송 시작 (KST 시)').min='8';fields.start_hour.max='20';
- field('end_hour','발송 종료 (KST 시)').max='21';
+ const allDay=field('all_day','자동 선톡 시간대 제한 없음','checkbox');
+ const startHour=field('start_hour','발송 시작 (KST 시)');startHour.min='8';startHour.max='20';
+ const endHour=field('end_hour','발송 종료 (KST 시)');endHour.max='21';
+ function updateHourLabels(){
+  const prefix=allDay.checked?'수동 발송':'발송';
+  startHour.parentElement.firstChild.textContent=prefix+' 시작 (KST 시)';
+  endHour.parentElement.firstChild.textContent=prefix+' 종료 (KST 시)';
+ }
+ updateHourLabels();
  field('batch_limit','한 배치 최대 사용자').max='100';
  field('daily_limit','사용자별 하루 최대 횟수').max='10';
  const promptLabel=el('label','선톡 전용 프롬프트'),prompt=el('textarea');prompt.rows=7;prompt.maxLength=8000;prompt.id='friend-push-prompt';fields.prompt=prompt;promptLabel.append(prompt);form.append(promptLabel);
@@ -43,7 +50,7 @@ export function createFriendPush(client,root){
  const dialog=el('dialog',null,'friend-push-detail'),close=el('button','닫기'),detailBody=el('div');close.type='button';close.onclick=()=>dialog.close();dialog.append(close,detailBody);root.append(dialog);
  function message(value,error=false){status.textContent=value;status.classList.toggle('error',error);}
  function invalidate(){preview=null;send.disabled=true;requestId=null;count.textContent='대상을 다시 확인해 주세요.';samples.replaceChildren();}
- form.addEventListener('input',()=>{dirty=true;invalidate();});uids.oninput=mode.onchange=text.oninput=()=>{textLabel.hidden=mode.value!=='manual';invalidate();};
+ form.addEventListener('input',()=>{updateHourLabels();dirty=true;invalidate();});uids.oninput=mode.onchange=text.oninput=()=>{textLabel.hidden=mode.value!=='manual';invalidate();};
  async function api(payload){
   const session=await client().auth.getSession();if(!session.data.session)throw Error('관리자 로그인이 필요합니다.');
   const {data,error}=await client().functions.invoke('admin-friend-push',{method:'POST',body:payload});
@@ -51,7 +58,7 @@ export function createFriendPush(client,root){
    throw Error(({revision_conflict:'다른 관리자가 설정을 변경했습니다. 새로고침 후 다시 확인해 주세요.',invalid_settings:'대상 조건과 시간·프롬프트를 확인해 주세요.',invalid_users:'회원 UID는 올바른 형식으로 최대 100명까지 입력해 주세요.',invalid_text:'메시지는 1~240자로 입력해 주세요.'})[code]??'친구 선톡 요청을 완료하지 못했습니다. 다시 시도해 주세요.');}
   return data;
  }
- function populate(value){settings=value;revision=value.revision;for(const [key,input]of Object.entries(fields)){if(input.type==='checkbox')input.checked=value[key];else input.value=value[key];}dirty=false;invalidate();}
+ function populate(value){settings=value;revision=value.revision;for(const [key,input]of Object.entries(fields)){if(input.type==='checkbox')input.checked=value[key];else input.value=value[key];}updateHourLabels();dirty=false;invalidate();}
  function table(headers,rows){const t=el('table',null,'collection-table admin-record-table'),head=el('thead'),r=el('tr'),body=el('tbody');for(const h of headers){const th=el('th',h);th.scope='col';r.append(th);}head.append(r);t.append(head,body);for(const row of rows){const tr=el('tr');for(const value of row){const td=el('td');if(value instanceof Node)td.append(value);else td.textContent=value??'—';tr.append(td);}body.append(tr);}return t;}
  async function loadHistory(){
   const ticket=generation;try{const data=await api({action:'list',page,size:20,status:stateFilter.value});if(ticket!==generation)return;total=data.total;
