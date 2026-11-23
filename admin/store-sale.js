@@ -98,12 +98,13 @@ export function createStoreSaleEditor({ getSnapshot, getClient, markDirty }) {
       fields.className = 'sale-grid';
       for (const [name, caption] of [
         ['label', '팝업 상품명'], ['regularPriceKrw', '정상가 (원)'], ['salePriceKrw', '할인가 (원)'],
+        ['alternateSalePriceKrw', '다른 스토어 할인가 (원, 선택)'],
       ]) {
         const label = document.createElement('label');
         const input = document.createElement('input');
         label.textContent = caption;
         input.dataset.saleField = name;
-        input.required = true;
+        input.required = name !== 'alternateSalePriceKrw';
         if (name === 'label') {
           input.maxLength = 32;
         } else {
@@ -113,7 +114,8 @@ export function createStoreSaleEditor({ getSnapshot, getClient, markDirty }) {
         }
         input.value = item[name] ?? '';
         input.oninput = () => {
-          item[name] = name === 'label' ? input.value :
+          if (name === 'alternateSalePriceKrw' && input.value === '') delete item[name];
+          else item[name] = name === 'label' ? input.value :
             Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : null;
           renderOfferSummary(summary, item, product.key);
           markDirty();
@@ -152,9 +154,12 @@ export function createStoreSaleEditor({ getSnapshot, getClient, markDirty }) {
 
   function renderOfferSummary(summary, item, key) {
     const monthly = key.endsWith('Monthly');
-    const discount = Math.floor((item.regularPriceKrw - item.salePriceKrw) * 100 / item.regularPriceKrw);
-    summary.textContent = !item.salePriceKrw || !(discount >= 0 && item.regularPriceKrw > item.salePriceKrw) ? '' :
-      `${discount}% 할인 · ${monthly ? '첫 달 ' : ''}${won.format(item.salePriceKrw)}원${monthly ? ` · 이후 월 ${won.format(item.regularPriceKrw)}원` : ''}`;
+    const amounts = [item.salePriceKrw, item.alternateSalePriceKrw]
+      .filter(amount => Number.isInteger(amount) && amount > 0 && amount < item.regularPriceKrw);
+    summary.textContent = amounts.map(amount => {
+      const discount = Math.floor((item.regularPriceKrw - amount) * 100 / item.regularPriceKrw);
+      return `${discount}% 할인 · ${monthly ? '첫 달 ' : ''}${won.format(amount)}원`;
+    }).join(' / ') + (monthly && amounts.length ? ` · 이후 월 ${won.format(item.regularPriceKrw)}원` : '');
   }
 
   field('sale-create').onclick = () => {
@@ -277,6 +282,11 @@ export function createStoreSaleEditor({ getSnapshot, getClient, markDirty }) {
     ))) return '노출할 할인 상품을 하나 이상 선택해 주세요.';
     if (sale.items.some(item => !item.label.trim() || !item.salePriceKrw || item.salePriceKrw >= item.regularPriceKrw)) {
       return '할인 상품명을 입력하고 할인가를 정상가보다 낮게 설정해 주세요.';
+    }
+    if (sale.items.some(item => item.alternateSalePriceKrw !== undefined &&
+      (!Number.isInteger(item.alternateSalePriceKrw) || item.alternateSalePriceKrw < 1 ||
+        item.alternateSalePriceKrw >= item.regularPriceKrw || item.alternateSalePriceKrw === item.salePriceKrw))) {
+      return '다른 스토어 할인가에는 정상가보다 낮고 기존 할인가와 다른 금액을 입력해 주세요.';
     }
     return null;
   }

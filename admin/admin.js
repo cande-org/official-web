@@ -291,9 +291,11 @@ $('preview').onclick = () => {
     for (const item of shown) {
       const monthly = item.key.endsWith('Monthly');
       const price = value => value ? `${value.toLocaleString('ko-KR')}원` : '미정';
+      const salePrices = [price(item.salePriceKrw)];
+      if (item.alternateSalePriceKrw !== undefined) salePrices.push(price(item.alternateSalePriceKrw));
       section.append(node('p', monthly
-        ? `${item.label} · 첫 달 ${price(item.salePriceKrw)} · 이후 월 ${price(item.regularPriceKrw)}`
-        : `${item.label} · ${price(item.regularPriceKrw)} → ${price(item.salePriceKrw)}`));
+        ? `${item.label} · 첫 달 ${salePrices.join(' / ')} · 이후 월 ${price(item.regularPriceKrw)}`
+        : `${item.label} · ${price(item.regularPriceKrw)} → ${salePrices.join(' / ')}`));
     }
     body.append(section);
   }

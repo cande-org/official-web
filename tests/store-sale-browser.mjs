@@ -118,7 +118,7 @@ try {
   await page.locator('#sale-pop-enabled').check();
   assert.equal(await page.locator('#sale-popup-hide-today').inputValue(), '오늘은 닫기');
   for (const [key, label, price] of [
-    ['messages30', '대화권 30회', '950'], ['liteMonthly', 'Lite 멤버십 첫 달', '2950'],
+    ['messages30', '대화권 30회', '900'], ['liteMonthly', 'Lite 멤버십 첫 달', '2900'],
   ]) {
     const row = page.locator('fieldset.sale-product').filter({ has: page.locator(`[data-sale-product="${key}"]`) });
     await row.locator('[data-sale-product]').check();
@@ -127,10 +127,15 @@ try {
   }
   const credit = page.locator('fieldset.sale-product').filter({ has: page.locator('[data-sale-product="messages30"]') });
   const lite = page.locator('fieldset.sale-product').filter({ has: page.locator('[data-sale-product="liteMonthly"]') });
+  const otherPrice = lite.locator('[data-sale-field=alternateSalePriceKrw]');
+  await otherPrice.fill('2900');
+  await page.locator('#form button[type=submit]').click();
+  assert.match(await page.locator('#status').innerText(), /다른 스토어 할인가/);
+  await otherPrice.fill('2950');
   await credit.locator('[data-sale-field=ticketStyle]').selectOption('gold');
   await lite.locator('[data-sale-field=showInPopup]').uncheck();
   await page.locator('#preview').click();
-  assert.match(await page.locator('#preview-body').innerText(), /첫 달 2,950원 · 이후 월 5,900원/);
+  assert.match(await page.locator('#preview-body').innerText(), /첫 달 2,900원 \/ 2,950원 · 이후 월 5,900원/);
   assert.match(await page.locator('#preview-body').innerText(), /기간 표시 안 함 · 오늘은 닫기/);
   assert.match(await page.locator('#preview-body').innerText(), /팝업 티켓 · 대화권 30회 \(금색\)/);
   await page.locator('#close-preview').click();
@@ -150,6 +155,7 @@ try {
   assert.equal(draft.items[0].key, 'messages30');
   assert.equal(draft.items[0].ticketStyle, 'gold');
   assert.equal(draft.items[1].showInPopup, false);
+  assert.equal(draft.items[1].alternateSalePriceKrw, 2950);
   assert.equal(draft.popup.showDates, false);
   assert.equal(draft.popup.hideTodayLabel, '오늘은 닫기');
   await page.locator('#publish').click();
