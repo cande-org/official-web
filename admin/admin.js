@@ -1,3 +1,4 @@
+import { createStoreSaleEditor } from './store-sale.js';
 import { createFriendPush } from './friend-push.js';
 import { createExitFeedback } from './exit-feedback.js';
 import { createAnimationPackages } from './animation-packages.js';
@@ -144,11 +145,13 @@ async function applyRoute(route){
 }
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
 function action(text, handler) { const b = node('button', text); b.type = 'button'; b.addEventListener('click', handler); return b; }
+const storeSaleEditor = createStoreSaleEditor({ getSnapshot: () => snapshot, markDirty });
 function render() {
   shell(true); $('login').hidden = true; $('editor').hidden = false; $('logout').hidden = false;
   $('revision').textContent = `초안 v${snapshot.revision} · 공개 v${snapshot.published_revision} · ${new Date(snapshot.published_at).toLocaleString('ko-KR')}`;
   $('dirty').textContent = dirty ? '저장하지 않은 변경사항' : '저장된 초안';
   contentLists.render();
+  storeSaleEditor.render();
   $('payment-notice').value = snapshot.draft.paymentNotice;
   $('store-section-order').value = snapshot.draft.storeSectionOrder ?? 'credits_first';
   $('store-order-published').textContent = `현재 공개: ${snapshot.publishedStoreSectionOrder === 'subscriptions_first' ? '구독권 먼저' : '대화권 먼저'}`;
@@ -210,6 +213,12 @@ async function save(publish) {
   // Validate hidden panels too and reveal the first invalid field.
   const invalid = $('form').querySelector(':invalid');
   if (invalid) { router.go({tab:invalid.closest('section').id,id:null,version:null}); invalid.reportValidity(); return; }
+  const saleError = storeSaleEditor.validationError();
+  if (saleError) {
+    router.go({tab:'products',id:null,version:null});
+    status(saleError, true);
+    return;
+  }
   if (publish && !confirm('현재 초안을 앱에 공개할까요? 노출을 끈 상품은 새 구매 목록에서 숨겨집니다. 기존 구매·구독은 유지됩니다.')) return;
   const generation = authGeneration;
   busy = true; $('editor').inert = true; status(publish ? '공개 중…' : '저장 중…');
@@ -218,6 +227,8 @@ async function save(publish) {
   finally { busy = false; $('editor').inert = false; }
 }
 async function saveItemContent(content) {
+  const saleError = storeSaleEditor.validationError();
+  if (saleError) throw Error(saleError);
   if (busy) throw Error('다른 요청을 처리 중입니다. 잠시 후 다시 시도해 주세요.');
   const generation = authGeneration;
   busy = true; $('editor').inert = true;
@@ -252,6 +263,23 @@ $('preview').onclick = () => {
   const body = $('preview-body'); body.replaceChildren();
   const products = snapshot.draft.products.filter(p => p.enabled);
   const appendProduct = p => { const section = node('section', null, 'preview-section'); section.append(node('h3', p.title), node('p', p.description), node('p', `참고 가격 ${p.referencePriceKrw.toLocaleString('ko-KR')}원`)); body.append(section); };
+  const sale = snapshot.draft.storeSale;
+  if (sale) {
+    const shown = sale.items.filter(item => products.some(product => product.key === item.key));
+    const section = node('section', null, 'preview-section');
+    const date = value => value ? new Date(value).toLocaleString('ko-KR', { timeZone:'Asia/Seoul' }) : '미정';
+    section.append(node('h2', sale.shopTitle || '할인 행사'),
+      node('p', `${sale.enabled ? '노출' : '꺼짐'} · ${date(sale.startsAt)} ~ ${date(sale.endsAt)} KST`));
+    if (sale.popup) section.append(node('p', `${sale.popup.title} · ${sale.popup.headline} · ${sale.popup.button}`));
+    for (const item of shown) {
+      const monthly = item.key.endsWith('Monthly');
+      const price = value => value ? `${value.toLocaleString('ko-KR')}원` : '미정';
+      section.append(node('p', monthly
+        ? `${item.label} · 첫 달 ${price(item.salePriceKrw)} · 이후 월 ${price(item.regularPriceKrw)}`
+        : `${item.label} · ${price(item.regularPriceKrw)} → ${price(item.salePriceKrw)}`));
+    }
+    body.append(section);
+  }
   if (snapshot.contracts) {
     const subscriptionKeys = new Set(snapshot.contracts.filter(c => c.subscription).map(c => c.key));
     for (const subscriptions of snapshot.draft.storeSectionOrder === 'subscriptions_first' ? [true, false] : [false, true]) {
