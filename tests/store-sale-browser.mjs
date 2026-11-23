@@ -1,10 +1,16 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const target = process.env.QA_SCREENSHOT_DIR;
 const origin = 'http://127.0.0.1:54321';
+const artworkBase = 'https://tzuxtejuscgyvgfmlijt.supabase.co/storage/v1/object/public/mental-sale-popup-images/';
+const artworkFiles = [
+  process.env.QA_SALE_PNG_PATH && fs.readFileSync(process.env.QA_SALE_PNG_PATH),
+  process.env.QA_SALE_JPG_PATH && fs.readFileSync(process.env.QA_SALE_JPG_PATH),
+];
 const seed = JSON.parse(fs.readFileSync(new URL('../../mental/server/supabase/content/initial.json', import.meta.url)));
 const bundle = await build({
   entryPoints: ['admin/admin.js'], bundle: true, write: false, format: 'esm',
@@ -29,6 +35,21 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('dialog', dialog => dialog.accept());
+  const uploaded = new Map();
+  await page.exposeFunction('fixtureUploadArtwork', encoded => {
+    const bytes = Buffer.from(encoded, 'base64');
+    const position = artworkFiles.findIndex(file => file && file.equals(bytes));
+    assert(position >= 0);
+    const mime = position ? 'image/jpeg' : 'image/png';
+    const suffix = position ? 'jpg' : 'png';
+    const url = `${artworkBase}${createHash('sha256').update(bytes).digest('hex')}.${suffix}`;
+    uploaded.set(url, { bytes, mime });
+    return { url, width: 900, height: 900 };
+  });
+  await page.route(artworkBase + '*', route => {
+    const asset = uploaded.get(route.request().url());
+    return asset ? route.fulfill({ contentType: asset.mime, body: asset.bytes }) : route.fulfill({ status: 404 });
+  });
   await page.route(origin + '/**', route => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === '/admin/admin.js') return route.fulfill({
@@ -63,6 +84,7 @@ try {
       },
       functions: { invoke: async (name, options) => {
         const body = options?.body;
+        if (name === 'admin-sale-image') return { data: { image: await window.fixtureUploadArtwork(body.image) } };
         if (name !== 'admin-content') return { data: {} };
         if (body) {
           if (body.revision !== window.snapshot.revision || window.conflict) {
@@ -135,6 +157,46 @@ try {
   if (target) {
     fs.mkdirSync(target, { recursive: true });
     await page.locator('#store-sale-panel').screenshot({ path: target + '/admin-sale.png' });
+  }
+  if (artworkFiles.every(Boolean)) {
+    const upload = async (index) => {
+      const mimeType = index ? 'image/jpeg' : 'image/png';
+      const name = index ? 'weekend.jpg' : 'spring.png';
+      await page.locator('#sale-popup-image').setInputFiles({ name, mimeType, buffer: artworkFiles[index] });
+      await page.waitForFunction(() => document.querySelector('#sale-popup-image-status').textContent.includes('추가했습니다'));
+      const preview = page.locator('#sale-popup-artwork');
+      await preview.evaluate(async image => { await image.decode(); });
+      return preview.getAttribute('src');
+    };
+    const first = await upload(0);
+    assert.equal(await page.evaluate(() => window.snapshot.publishedStoreSale.popup.image), undefined);
+    await page.locator('#form button[type=submit]').click();
+    await page.waitForFunction(url => window.snapshot.draft.storeSale.popup.image?.url === url, first);
+    await page.reload();
+    assert.equal(await page.locator('#sale-popup-artwork').getAttribute('src'), first);
+    await page.locator('#publish').click();
+    await page.waitForFunction(url => window.snapshot.publishedStoreSale.popup.image?.url === url, first);
+    const second = await upload(1);
+    assert.notEqual(second, first);
+    assert.equal(await page.evaluate(() => window.snapshot.publishedStoreSale.popup.image.url), first);
+    await input('sale-popup-button', '할인 상품 보러 가기');
+    await page.locator('#preview').click();
+    assert.match(await page.locator('#preview-body').innerText(), /할인 상품 보러 가기/);
+    await page.locator('.sale-preview-artwork').evaluate(async image => { await image.decode(); });
+    await page.locator('#close-preview').click();
+    if (target) await page.locator('#sale-popup').screenshot({ path: target + '/admin-popup-upload.png' });
+    await page.locator('#publish').click();
+    await page.waitForFunction(url => window.snapshot.publishedStoreSale.popup.image?.url === url, second);
+    assert.equal(await page.evaluate(() => window.snapshot.publishedStoreSale.popup.button), '할인 상품 보러 가기');
+    await input('sale-popup-button', '혜택 확인하기');
+    await page.locator('#publish').click();
+    await page.waitForFunction(() => window.snapshot.publishedStoreSale.popup.button === '혜택 확인하기');
+    assert.equal(await page.evaluate(() => window.snapshot.publishedStoreSale.popup.image.url), second);
+    assert.equal(uploaded.size, 2);
+    await page.locator('#sale-popup-image-remove').click();
+    await page.locator('#publish').click();
+    await page.waitForFunction(() => !window.snapshot.publishedStoreSale.popup.image);
+    console.log('Popup image: PNG upload, saved draft reload, JPEG replacement, independent label, and reset passed.');
   }
   for (const width of [360, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });

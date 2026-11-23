@@ -6,11 +6,16 @@ function toInputTime(value) {
   return new Date(Date.parse(value) + 9 * 3600000).toISOString().slice(0, 16);
 }
 
-export function createStoreSaleEditor({ getSnapshot, markDirty }) {
+export function createStoreSaleEditor({ getSnapshot, getClient, markDirty }) {
   const field = id => document.getElementById(id);
   const panel = field('sale-editor');
   const rows = field('sale-items');
   const paid = field('sale-popup');
+  const imageInput = field('sale-popup-image');
+  const imageStatus = field('sale-popup-image-status');
+  const artwork = field('sale-popup-artwork');
+  const removeImage = field('sale-popup-image-remove');
+  let uploading = false;
   const props = [
     ['sale-title', 'shopTitle'],
     ['sale-popup-title', 'title'],
@@ -18,6 +23,15 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     ['sale-popup-button', 'button'],
   ];
   const popupEnabled = sale => !!sale?.popup && sale.popup.enabled !== false;
+
+  function renderImage() {
+    const snapshot = getSnapshot();
+    const image = snapshot?.draft.storeSale?.popup?.image;
+    field('sale-popup-image-preview').hidden = !image;
+    if (image) artwork.src = image.url;
+    else artwork.removeAttribute('src');
+    imageInput.disabled = removeImage.disabled = uploading;
+  }
 
   function render() {
     const snapshot = getSnapshot();
@@ -34,6 +48,7 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     panel.hidden = !sale;
     panel.disabled = !sale;
     rows.replaceChildren();
+    renderImage();
     if (!sale) return;
     field('sale-enabled').checked = sale.enabled;
     field('sale-start').value = toInputTime(sale.startsAt);
@@ -185,6 +200,53 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     getSnapshot().draft.storeSale.popup.showDates = e.target.checked;
     markDirty();
   };
+  imageInput.onchange = async () => {
+    const file = imageInput.files[0];
+    imageInput.value = '';
+    const sale = getSnapshot()?.draft.storeSale;
+    const popup = sale?.popup;
+    if (!file || !popupEnabled(sale) || uploading) return;
+    const current = () => getSnapshot()?.draft.storeSale === sale && sale.popup === popup && popupEnabled(sale);
+    uploading = true;
+    renderImage();
+    imageStatus.textContent = '이미지 업로드 중…';
+    try {
+      if (!['image/png', 'image/jpeg'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+        throw Error('2MB 이하 PNG 또는 JPG 파일을 선택해 주세요.');
+      }
+      const bitmap = await createImageBitmap(file).catch(() => { throw Error('이미지를 읽지 못했습니다.'); });
+      const tooLarge = bitmap.width > 2048 || bitmap.height > 2048;
+      bitmap.close();
+      if (tooLarge) throw Error('이미지 크기를 2048×2048px 이하로 줄여 주세요.');
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(Error('파일을 읽지 못했습니다.'));
+        reader.readAsDataURL(file);
+      });
+      if (!current()) return;
+      const { data, error } = await getClient().functions.invoke('admin-sale-image', {
+        method: 'POST', body: { image: dataUrl.split(',')[1] },
+      });
+      if (!current()) return;
+      if (error || !data?.image) throw Error('이미지 업로드에 실패했습니다. 다시 시도해 주세요.');
+      popup.image = data.image;
+      markDirty();
+      imageStatus.textContent = '초안에 이미지를 추가했습니다. ‘앱에 공개’를 누르면 반영됩니다.';
+    } catch (error) {
+      if (current()) imageStatus.textContent = error.message;
+    } finally {
+      uploading = false;
+      if (!current()) imageStatus.textContent = '';
+      renderImage();
+    }
+  };
+  removeImage.onclick = () => {
+    delete getSnapshot().draft.storeSale.popup.image;
+    markDirty();
+    renderImage();
+    imageStatus.textContent = '‘앱에 공개’를 누르면 기본 티켓으로 돌아갑니다.';
+  };
   for (const [id, prop] of props) {
     field(id).oninput = e => {
       const sale = getSnapshot().draft.storeSale;
@@ -219,5 +281,5 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     return null;
   }
 
-  return { render, validationError };
+  return { render, validationError, isUploading: () => uploading };
 }

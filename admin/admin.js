@@ -145,7 +145,7 @@ async function applyRoute(route){
 }
 function markDirty() { dirty = true; $('dirty').textContent = '저장하지 않은 변경사항'; }
 function action(text, handler) { const b = node('button', text); b.type = 'button'; b.addEventListener('click', handler); return b; }
-const storeSaleEditor = createStoreSaleEditor({ getSnapshot: () => snapshot, markDirty });
+const storeSaleEditor = createStoreSaleEditor({ getSnapshot: () => snapshot, getClient: () => client, markDirty });
 function render() {
   shell(true); $('login').hidden = true; $('editor').hidden = false; $('logout').hidden = false;
   $('revision').textContent = `초안 v${snapshot.revision} · 공개 v${snapshot.published_revision} · ${new Date(snapshot.published_at).toLocaleString('ko-KR')}`;
@@ -209,6 +209,7 @@ async function load() {
 }
 async function save(publish) {
   if (busy) return;
+  if (storeSaleEditor.isUploading()) { status('팝업 이미지 업로드가 끝난 뒤 저장해 주세요.', true); return; }
   if (animationPackages.isBusy()) { status('애니메이션 업로드가 끝난 뒤 저장해 주세요.',true); return; }
   // Validate hidden panels too and reveal the first invalid field.
   const invalid = $('form').querySelector(':invalid');
@@ -227,6 +228,7 @@ async function save(publish) {
   finally { busy = false; $('editor').inert = false; }
 }
 async function saveItemContent(content) {
+  if (storeSaleEditor.isUploading()) throw Error('팝업 이미지 업로드가 끝난 뒤 저장해 주세요.');
   const saleError = storeSaleEditor.validationError();
   if (saleError) throw Error(saleError);
   if (busy) throw Error('다른 요청을 처리 중입니다. 잠시 후 다시 시도해 주세요.');
@@ -273,11 +275,18 @@ $('preview').onclick = () => {
     if (sale.popup && sale.popup.enabled !== false) {
       const tickets = shown.filter(item => item.showInPopup !== false);
       section.append(node('p', `${sale.popup.title} · ${sale.popup.headline} · ${sale.popup.button}`),
-        node('p', `${sale.popup.showDates === false ? '기간 표시 안 함' : '기간 표시'} · ${sale.popup.hideTodayLabel || '오늘 하루 보지 않기'}`),
-        node('p', tickets.length ? `팝업 티켓 · ${tickets.map(item => {
+        node('p', `${sale.popup.showDates === false ? '기간 표시 안 함' : '기간 표시'} · ${sale.popup.hideTodayLabel || '오늘 하루 보지 않기'}`));
+      if (sale.popup.image) {
+        const image = node('img', null, 'sale-preview-artwork');
+        image.src = sale.popup.image.url;
+        image.alt = '팝업 이미지 미리보기';
+        section.append(image);
+      } else {
+        section.append(node('p', tickets.length ? `팝업 티켓 · ${tickets.map(item => {
           const style = item.ticketStyle === 'gold' ? '금색' : item.ticketStyle === 'cream' ? '크림색' : '자동';
           return `${item.label} (${style})`;
         }).join(' · ')}` : '팝업에 표시할 상품이 없습니다.'));
+      }
     }
     for (const item of shown) {
       const monthly = item.key.endsWith('Monthly');

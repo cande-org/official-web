@@ -71,11 +71,17 @@
 <div class="sale-grid">
 <label>팝업 제목<input id="sale-popup-title" maxlength="36" required></label>
 <label>강조 문구<input id="sale-popup-headline" maxlength="20" required></label>
-<label>버튼 이름<input id="sale-popup-button" maxlength="22" required></label>
+<label>버튼 라벨<input id="sale-popup-button" maxlength="22" required></label>
 <label>하루 동안 숨기기 문구<input id="sale-popup-hide-today" maxlength="24" placeholder="오늘 하루 보지 않기"></label>
 </div>
 <label class="sale-toggle"><input type="checkbox" id="sale-popup-show-dates">팝업에 행사 기간 표시</label>
-<p class="helper">티켓에 표시할 상품과 디자인은 아래 할인 상품에서 선택합니다.</p>
+<div class="sale-image-editor">
+<label>팝업 이미지<input type="file" id="sale-popup-image" accept="image/png,image/jpeg" aria-describedby="sale-popup-image-help"></label>
+<p class="helper" id="sale-popup-image-help">PNG·JPG, 최대 2MB 및 2048×2048px. 이미지는 팝업 본문에 표시되고 버튼은 아래에 따로 표시됩니다.</p>
+<div id="sale-popup-image-preview" hidden><img id="sale-popup-artwork" alt="초안 팝업 이미지"><button type="button" id="sale-popup-image-remove">기본 티켓으로 돌아가기</button></div>
+<p class="helper" id="sale-popup-image-status" role="status"></p>
+</div>
+<p class="helper">기본 티켓에 표시할 상품과 디자인은 아래 할인 상품에서 선택합니다.</p>
 </fieldset>
 <h3>할인 상품</h3>
 <div id="sale-items"></div>
