@@ -270,7 +270,15 @@ $('preview').onclick = () => {
     const date = value => value ? new Date(value).toLocaleString('ko-KR', { timeZone:'Asia/Seoul' }) : '미정';
     section.append(node('h2', sale.shopTitle || '할인 행사'),
       node('p', `${sale.enabled ? '노출' : '꺼짐'} · ${date(sale.startsAt)} ~ ${date(sale.endsAt)} KST`));
-    if (sale.popup) section.append(node('p', `${sale.popup.title} · ${sale.popup.headline} · ${sale.popup.button}`));
+    if (sale.popup && sale.popup.enabled !== false) {
+      const tickets = shown.filter(item => item.showInPopup !== false);
+      section.append(node('p', `${sale.popup.title} · ${sale.popup.headline} · ${sale.popup.button}`),
+        node('p', `${sale.popup.showDates === false ? '기간 표시 안 함' : '기간 표시'} · ${sale.popup.hideTodayLabel || '오늘 하루 보지 않기'}`),
+        node('p', tickets.length ? `팝업 티켓 · ${tickets.map(item => {
+          const style = item.ticketStyle === 'gold' ? '금색' : item.ticketStyle === 'cream' ? '크림색' : '자동';
+          return `${item.label} (${style})`;
+        }).join(' · ')}` : '팝업에 표시할 상품이 없습니다.'));
+    }
     for (const item of shown) {
       const monthly = item.key.endsWith('Monthly');
       const price = value => value ? `${value.toLocaleString('ko-KR')}원` : '미정';

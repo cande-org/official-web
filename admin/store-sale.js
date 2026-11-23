@@ -17,6 +17,7 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     ['sale-popup-headline', 'headline'],
     ['sale-popup-button', 'button'],
   ];
+  const popupEnabled = sale => !!sale?.popup && sale.popup.enabled !== false;
 
   function render() {
     const snapshot = getSnapshot();
@@ -37,9 +38,11 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     field('sale-enabled').checked = sale.enabled;
     field('sale-start').value = toInputTime(sale.startsAt);
     field('sale-end').value = toInputTime(sale.endsAt);
-    field('sale-pop-enabled').checked = !!sale.popup;
-    paid.hidden = !sale.popup;
-    paid.disabled = !sale.popup;
+    field('sale-pop-enabled').checked = popupEnabled(sale);
+    paid.hidden = !popupEnabled(sale);
+    paid.disabled = !popupEnabled(sale);
+    field('sale-popup-show-dates').checked = sale.popup?.showDates !== false;
+    field('sale-popup-hide-today').value = sale.popup?.hideTodayLabel ?? '';
     for (const [id, prop] of props) {
       const source = id === 'sale-title' ? sale : sale.popup;
       field(id).value = source?.[prop] ?? '';
@@ -103,6 +106,28 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
         label.append(input);
         fields.append(label);
       }
+      const show = document.createElement('input');
+      show.type = 'checkbox';
+      show.checked = item.showInPopup !== false;
+      show.dataset.saleField = 'showInPopup';
+      const showLabel = document.createElement('label');
+      showLabel.className = 'sale-toggle';
+      showLabel.append(show, '팝업에 이 상품 표시');
+      show.onchange = () => { item.showInPopup = show.checked; markDirty(); };
+      const style = document.createElement('select');
+      style.dataset.saleField = 'ticketStyle';
+      for (const [value, name] of [['', '자동'], ['cream', '크림색'], ['gold', '금색']]) {
+        style.append(new Option(name, value));
+      }
+      style.value = item.ticketStyle ?? '';
+      style.onchange = () => {
+        if (style.value) item.ticketStyle = style.value;
+        else delete item.ticketStyle;
+        markDirty();
+      };
+      const styleLabel = document.createElement('label');
+      styleLabel.append('티켓 디자인', style);
+      fields.append(showLabel, styleLabel);
       const summary = document.createElement('p');
       summary.className = 'helper';
       renderOfferSummary(summary, item, product.key);
@@ -141,12 +166,23 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
   };
   field('sale-pop-enabled').onchange = e => {
     const sale = getSnapshot().draft.storeSale;
-    sale.popup = e.target.checked
-      ? { title: sale.shopTitle, headline: 'SALE', button: '세일 상점 가기' }
-      : null;
-    paid.hidden = !sale.popup;
-    paid.disabled = !sale.popup;
-    if (sale.popup) for (const [id, prop] of props.slice(1)) field(id).value = sale.popup[prop];
+    const defaults = { title: sale.shopTitle || '할인 행사', headline: 'SALE', button: '세일 상점 가기' };
+    sale.popup ??= defaults;
+    if (!e.target.checked) for (const [key, value] of Object.entries(defaults)) {
+      if (!sale.popup[key].trim()) sale.popup[key] = value;
+    }
+    sale.popup.enabled = e.target.checked;
+    render();
+    markDirty();
+  };
+  field('sale-popup-hide-today').oninput = e => {
+    const popup = getSnapshot().draft.storeSale.popup;
+    if (e.target.value.trim()) popup.hideTodayLabel = e.target.value;
+    else delete popup.hideTodayLabel;
+    markDirty();
+  };
+  field('sale-popup-show-dates').onchange = e => {
+    getSnapshot().draft.storeSale.popup.showDates = e.target.checked;
     markDirty();
   };
   for (const [id, prop] of props) {
@@ -171,7 +207,7 @@ export function createStoreSaleEditor({ getSnapshot, markDirty }) {
     if (!sale.startsAt || !sale.endsAt || sale.startsAt >= sale.endsAt) {
       return '종료 시각은 시작 시각 이후로 입력해 주세요.';
     }
-    if (!sale.shopTitle.trim() || (sale.popup && Object.values(sale.popup).some(value => !value.trim()))) {
+    if (!sale.shopTitle.trim() || (sale.popup && ['title', 'headline', 'button'].some(key => !sale.popup[key].trim()))) {
       return '행사와 팝업 문구를 입력해 주세요.';
     }
     if (!sale.items.length || (sale.enabled && !sale.items.some(

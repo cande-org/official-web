@@ -90,6 +90,11 @@ try {
   await page.locator('#sale-pop-enabled').check();
   await input('sale-popup-title', '정병발사 블랙프라이데이');
   await input('sale-popup-headline', '50% SALE');
+  await input('sale-popup-hide-today', '오늘은 닫기');
+  await page.locator('#sale-popup-show-dates').uncheck();
+  await page.locator('#sale-pop-enabled').uncheck();
+  await page.locator('#sale-pop-enabled').check();
+  assert.equal(await page.locator('#sale-popup-hide-today').inputValue(), '오늘은 닫기');
   for (const [key, label, price] of [
     ['messages30', '대화권 30회', '950'], ['liteMonthly', 'Lite 멤버십 첫 달', '2950'],
   ]) {
@@ -98,8 +103,14 @@ try {
     await row.locator('[data-sale-field=label]').fill(label);
     await row.locator('[data-sale-field=salePriceKrw]').fill(price);
   }
+  const credit = page.locator('fieldset.sale-product').filter({ has: page.locator('[data-sale-product="messages30"]') });
+  const lite = page.locator('fieldset.sale-product').filter({ has: page.locator('[data-sale-product="liteMonthly"]') });
+  await credit.locator('[data-sale-field=ticketStyle]').selectOption('gold');
+  await lite.locator('[data-sale-field=showInPopup]').uncheck();
   await page.locator('#preview').click();
   assert.match(await page.locator('#preview-body').innerText(), /첫 달 2,950원 · 이후 월 5,900원/);
+  assert.match(await page.locator('#preview-body').innerText(), /기간 표시 안 함 · 오늘은 닫기/);
+  assert.match(await page.locator('#preview-body').innerText(), /팝업 티켓 · 대화권 30회 \(금색\)/);
   await page.locator('#close-preview').click();
   await input('sale-end', '2026-11-22T00:00');
   await page.locator('#form button[type=submit]').click();
@@ -115,6 +126,10 @@ try {
   assert.equal(draft.startsAt, '2026-11-22T15:00:00.000Z');
   assert.equal(draft.endsAt, '2026-11-29T15:00:00.000Z');
   assert.equal(draft.items[0].key, 'messages30');
+  assert.equal(draft.items[0].ticketStyle, 'gold');
+  assert.equal(draft.items[1].showInPopup, false);
+  assert.equal(draft.popup.showDates, false);
+  assert.equal(draft.popup.hideTodayLabel, '오늘은 닫기');
   await page.locator('#publish').click();
   await page.waitForFunction(() => window.snapshot.publishedStoreSale?.items.length === 2);
   if (target) {
