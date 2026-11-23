@@ -503,7 +503,7 @@ h1{font-size:25px}
 #store-sale-panel > h2 { margin-top: 0; }
 #sale-editor { margin-top: 16px; }
 #store-sale-panel fieldset { border: 0; padding: 0; min-inline-size: 0; }
-#store-sale-panel .sale-toggle { display: flex; gap: 8px; align-items: center; }
+#store-sale-panel .sale-toggle { display: flex; flex-direction: row; gap: 8px; align-items: center; }
 #store-sale-panel .sale-toggle input { width: auto; margin: 0; }
 .sale-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); }
 #store-sale-panel .sale-product { padding: 9px 0; border-top: 1px solid #e2e4e7; margin: 0; }
